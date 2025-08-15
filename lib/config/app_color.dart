@@ -38,6 +38,16 @@ class AppColor {
   static const Color colorSuccess = Color(0xFF76F278); // #76F278
   static const Color colorStatusBar = Color(0xFF0D0D0E); // #76F278
   static const Color colorDivider = Color(0xFFD9D9D9); // #76F278
+
+
+
+  static const bg = Color(0xFFF6F7FB); // background lembut
+  static const card = Colors.white;
+  static const dark = Color(0xFF2E3A59); // biru gelap (welcome + stats)
+  static const dark2 = Color(0xFF1E2D4D);
+  static const textDark = Color(0xFF4A3F39);
+  static const hint = Color(0xFF9AA3B2);
+  static const divider = Color(0xFFE7E8EC);
 }
 
 TextStyle poppinsTextStyle = GoogleFonts.poppins();

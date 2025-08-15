@@ -1,7 +1,7 @@
 class Endpoint {
   //auth
-  static const String authLoginUrl = '/api/login';
-  static const String logoutUrl = '/api/logout';
+  static const String authLoginUrl = '/api/auth/login';
+  static const String logoutUrl = '/api/auth/logout';
 
 
 }
