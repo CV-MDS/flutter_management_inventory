@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_management_inventory/config/app_color.dart';
+import 'package:flutter_management_inventory/view/activity_history/activity_history_page.dart';
 import 'package:flutter_management_inventory/view/base_page.dart';
+import 'package:flutter_management_inventory/view/profile/profile_page.dart';
 
 import '../../config/pref.dart';
 import '../../viewmodel/auth_viewmodel.dart';
@@ -11,6 +13,7 @@ import '../../widget/quick_tile.dart';
 import '../../widget/section_header.dart';
 import '../../widget/sidebar_drawer.dart';
 import '../../widget/stat_card.dart';
+import '../user_management/user_management_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,25 +35,36 @@ class _HomePageState extends State<HomePage> {
         onTap: (i) {
           setState(() => _selectedDrawer = i);
           Navigator.pop(context);
+
+          switch (i) {
+            case 0:
+              break;
+            case 1:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
+              );
+              break;
+            case 2: // Activity History
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ActivityHistoryPage()),
+              );
+              break;
+            case 3:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UserManagementPage()),
+              );
+              break;
+            case 4:
+              break;
+          }
         },
       ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Row(
-                  children: [
-                    CircleIcon(
-                      icon: Icons.menu,
-                      onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             // Header profile + tombol aksi kanan + search
             SliverToBoxAdapter(
               child: Padding(
@@ -59,32 +73,41 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: AppColor.dark,
-                          child: Icon(Icons.person, color: Colors.white),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Dasboard",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColor.textDark,
-                                  )),
-                              SizedBox(height: 2),
-                              Text("Administrator",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColor.hint,
-                                    fontWeight: FontWeight.w600,
-                                  )),
-                            ],
+                        InkWell(
+                          onTap: (){
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage(),));
+                          },
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppColor.dark,
+                            child: Icon(Icons.person, color: Colors.white),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _go(1),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Dasboard",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColor.textDark,
+                                    )),
+                                SizedBox(height: 2),
+                                Text("Administrator",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColor.hint,
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Spacer(),
                         CircleIcon(
                           icon: Icons.logout_rounded,
                           onTap: () async {
@@ -110,6 +133,12 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
+                        CircleIcon(
+                          icon: Icons.tune_rounded,
+                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                          dark: true,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Container(
                             height: 44,
@@ -140,12 +169,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        CircleIcon(
-                          icon: Icons.tune_rounded,
-                          onTap: () {},
-                          dark: true,
-                        ),
+
                       ],
                     ),
                   ],
@@ -247,23 +271,24 @@ class _HomePageState extends State<HomePage> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Column(
-                  children: const [
+                  children: [
                     QuickTile(
                       icon: Icons.person_rounded,
                       title: "Lihat Profile",
                       subtitle: "Kelola informasi akun",
+                      onTap: () => _go(1),
                     ),
-                    SizedBox(height: 10),
                     QuickTile(
                       icon: Icons.groups_rounded,
                       title: "Management Users",
                       subtitle: "Quick Access",
+                      onTap: () => _go(3),
                     ),
-                    SizedBox(height: 10),
                     QuickTile(
                       icon: Icons.history_toggle_off_rounded,
                       title: "Activity Logs",
                       subtitle: "Quick Access",
+                      onTap: () => _go(2),
                     ),
                   ],
                 ),
@@ -321,4 +346,29 @@ class _HomePageState extends State<HomePage> {
     );
     return res ?? false;
   }
+
+  _go(int index) {
+    setState(() => _selectedDrawer = index);
+    switch (index) {
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfilePage()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ActivityHistoryPage()),
+        );
+        break;
+      case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const UserManagementPage()),
+        );
+        break;
+    }
+  }
+
 }
