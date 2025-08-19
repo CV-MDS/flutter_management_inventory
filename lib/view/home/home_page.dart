@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_management_inventory/config/app_color.dart';
+import 'package:flutter_management_inventory/model/dashboard.dart';
 import 'package:flutter_management_inventory/view/activity_history/activity_history_page.dart';
 import 'package:flutter_management_inventory/view/base_page.dart';
 import 'package:flutter_management_inventory/view/profile/profile_page.dart';
+import 'package:flutter_management_inventory/viewmodel/dashboard_viewmodel.dart';
 
 import '../../config/pref.dart';
 import '../../viewmodel/auth_viewmodel.dart';
@@ -26,8 +28,66 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedDrawer = 0;
 
+  Dashboard? _dashboard;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDashboard();
+  }
+
+  Future<void> _fetchDashboard() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final res = await DashboardViewmodel().getDashboard();
+    if (!mounted) return;
+
+    if (res.code == 200) {
+      // Beberapa wrapper Resp punya res.data langsung berisi payload “data”,
+      // tapi kalau tidak, fallback ke res.data['data'].
+      final dynamic raw = res.data;
+      final Map<String, dynamic> payload = (raw is Map<String, dynamic> && raw.containsKey('user'))
+          ? raw
+          : (raw is Map<String, dynamic> ? (raw['data'] as Map<String, dynamic>) : <String, dynamic>{});
+
+      setState(() {
+        _dashboard = Dashboard.fromJson(payload);
+        _isLoading = false;
+      });
+    } else if (res.code == 401) {
+      // Token invalid → paksa logout
+      await Session().logout();
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const BasePage()),
+            (route) => false,
+      );
+    } else {
+      setState(() {
+        _error = res.message ?? 'Failed to load dashboard';
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _agoShort(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inDays >= 1) return '${diff.inDays}d';
+    if (diff.inHours >= 1) return '${diff.inHours}h';
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m';
+    return 'now';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final name = _dashboard?.user?.name ?? 'Admin';
+    final role = (_dashboard?.role ?? _dashboard?.user?.roles ?? 'Administrator');
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: SidebarDrawer(
@@ -38,32 +98,29 @@ class _HomePageState extends State<HomePage> {
 
           switch (i) {
             case 0:
+            // Dashboard (stay here)
               break;
             case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfilePage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
               break;
-            case 2: // Activity History
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ActivityHistoryPage()),
-              );
+            case 2:
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
               break;
             case 3:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const UserManagementPage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
               break;
             case 4:
+            // Products (belum diimplement)
               break;
           }
         },
       ),
       body: SafeArea(
-        child: CustomScrollView(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+            ? _errorState()
+            : CustomScrollView(
           slivers: [
             // Header profile + tombol aksi kanan + search
             SliverToBoxAdapter(
@@ -74,10 +131,11 @@ class _HomePageState extends State<HomePage> {
                     Row(
                       children: [
                         InkWell(
-                          onTap: (){
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage(),));
-                          },
-                          child: CircleAvatar(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ProfilePage()),
+                          ),
+                          child: const CircleAvatar(
                             radius: 22,
                             backgroundColor: AppColor.dark,
                             child: Icon(Icons.person, color: Colors.white),
@@ -90,24 +148,28 @@ class _HomePageState extends State<HomePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Dasboard",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColor.textDark,
-                                    )),
-                                SizedBox(height: 2),
-                                Text("Administrator",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColor.hint,
-                                      fontWeight: FontWeight.w600,
-                                    )),
+                                const Text(
+                                  "Dashboard",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColor.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  role,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColor.hint,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ),
-                        Spacer(),
+                        const Spacer(),
                         CircleIcon(
                           icon: Icons.logout_rounded,
                           onTap: () async {
@@ -118,8 +180,9 @@ class _HomePageState extends State<HomePage> {
                                   await Session().logout();
                                   if (!mounted) return;
                                   Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(builder: (_) => const BasePage()),
-                                          (Route<dynamic> route) => false);
+                                    MaterialPageRoute(builder: (_) => const BasePage()),
+                                        (Route<dynamic> route) => false,
+                                  );
                                   showToast(context: context, msg: "Logout Berhasil");
                                 } else {
                                   showToast(context: context, msg: "Terjadi Kesalahan");
@@ -154,8 +217,8 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Row(
-                              children: const [
+                            child: const Row(
+                              children: [
                                 Icon(Icons.search, color: AppColor.hint),
                                 SizedBox(width: 8),
                                 Text(
@@ -169,7 +232,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
-
                       ],
                     ),
                   ],
@@ -195,20 +257,20 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Selamat Datang, Admin",
-                        style: TextStyle(
+                        "Selamat Datang, $name",
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           height: 1.2,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
+                      const SizedBox(height: 6),
+                      const Text(
                         "Kelola seluruh sistem dan pengguna\ndengan akses penuh",
                         style: TextStyle(
                           color: Colors.white70,
@@ -231,23 +293,23 @@ class _HomePageState extends State<HomePage> {
                     Expanded(
                       child: StatCard(
                         icon: Icons.insert_drive_file_rounded,
-                        value: "4",
+                        value: (_dashboard?.totalUsers ?? 0).toString(),
                         label: "Total User",
                       ),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: StatCard(
                         icon: Icons.inventory_2_rounded,
-                        value: "4",
+                        value: (_dashboard?.totalProducts ?? 0).toString(),
                         label: "Products",
                       ),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: StatCard(
                         icon: Icons.today_rounded,
-                        value: "4",
+                        value: (_dashboard?.todayActivities ?? 0).toString(),
                         label: "Today activity",
                       ),
                     ),
@@ -260,8 +322,7 @@ class _HomePageState extends State<HomePage> {
             SliverToBoxAdapter(
               child: SectionHeader(
                 title: "Quick Actions",
-                subtitle:
-                "Administrative controls and system management",
+                subtitle: "Administrative controls and system management",
                 onTap: () {},
               ),
             ),
@@ -276,14 +337,16 @@ class _HomePageState extends State<HomePage> {
                       icon: Icons.person_rounded,
                       title: "Lihat Profile",
                       subtitle: "Kelola informasi akun",
-                      onTap: () => _go(1),
+                      onTap: () => _go(1), // JANGAN onTap: _go(1)
                     ),
+                    const SizedBox(height: 10),
                     QuickTile(
                       icon: Icons.groups_rounded,
                       title: "Management Users",
                       subtitle: "Quick Access",
                       onTap: () => _go(3),
                     ),
+                    const SizedBox(height: 10),
                     QuickTile(
                       icon: Icons.history_toggle_off_rounded,
                       title: "Activity Logs",
@@ -303,21 +366,37 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Activity list
-            SliverList.separated(
-              itemCount: 3,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: ActivityTile(
-                    title: "Login",
-                    subtitle: "Login by admin",
-                    trailingTime: "1h",
-                  ),
-                );
-              },
-            ),
+            // Activity list dari API
+            if ((_dashboard?.recentActivities ?? []).isEmpty)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(child: Text('No recent activity')),
+                ),
+              )
+            else
+              SliverList.separated(
+                itemCount: _dashboard!.recentActivities.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, i) {
+                  final a = _dashboard!.recentActivities[i];
+                  final title = (a.action ?? '').isEmpty
+                      ? 'Activity'
+                      : a.action![0].toUpperCase() + a.action!.substring(1);
+                  final subtitle = a.description ?? a.ipAddress ?? '-';
+                  final trailing = a.createdAt != null ? _agoShort(a.createdAt!) : '';
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ActivityTile(
+                      title: title,
+                      subtitle: subtitle,
+                      trailingTime: trailing,
+                    ),
+                  );
+                },
+              ),
+
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -325,10 +404,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_error ?? 'Error', style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _fetchDashboard,
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<bool> showConfirmLogoutDialog(BuildContext context) async {
     final res = await showDialog<bool>(
       context: context,
-      barrierDismissible: false, // biar tidak ketutup tanpa pilihan
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Logout'),
         content: const Text('Apakah kamu yakin ingin keluar dari akun?'),
@@ -347,28 +442,20 @@ class _HomePageState extends State<HomePage> {
     return res ?? false;
   }
 
-  _go(int index) {
+  void _go(int index) {
+    // Perbarui selected drawer state agar highlight di sidebar sesuai
     setState(() => _selectedDrawer = index);
+
     switch (index) {
       case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfilePage()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
         break;
       case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ActivityHistoryPage()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
         break;
       case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const UserManagementPage()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
         break;
     }
   }
-
 }
