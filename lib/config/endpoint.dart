@@ -7,4 +7,6 @@ class Endpoint {
   static const String dashboardUrl = '/api/dashboard';
 
 
+  // activities role admin
+  static const String activityRoleAdmin = '/api/activities';
 }
