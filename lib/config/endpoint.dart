@@ -13,4 +13,7 @@ class Endpoint {
 
   // users role by admin
   static const String usersByAdmin = '/api/users';
+
+  static const String productUrl = '/api/products';
+  static const String categoriesUrl = '/api/categories';
 }

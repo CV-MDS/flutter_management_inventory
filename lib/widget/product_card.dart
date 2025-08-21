@@ -1,16 +1,45 @@
 import 'package:flutter/material.dart';
-
 import '../color.dart';
-import '../model/product.dart';
 
 class ProductCard extends StatelessWidget {
-  final Product data;
+  final String name;
+  final String category;
+  final int stock;
+  final String? imageUrl;        // bisa absolute atau relative
+  final bool lowStock;
   final VoidCallback? onView;
 
-  const ProductCard({super.key, required this.data, this.onView});
+  /// Opsional: base URL untuk image relative dari API.
+  /// Contoh: "https://your-domain/storage"
+  final String? imageBaseUrl;
+
+  const ProductCard({
+    super.key,
+    required this.name,
+    required this.category,
+    required this.stock,
+    this.imageUrl,
+    this.lowStock = false,
+    this.onView,
+    this.imageBaseUrl,
+  });
+
+  String? get _resolvedImage {
+    final path = imageUrl?.trim();
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    if (imageBaseUrl == null || imageBaseUrl!.isEmpty) return null;
+    var base = imageBaseUrl!;
+    var p = path;
+    if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+    if (p.startsWith('/')) p = p.substring(1);
+    return '$base/$p';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final stockColor = lowStock ? const Color(0xFFFF3B30) : C.success;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: BoxDecoration(
@@ -28,22 +57,22 @@ class ProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image placeholder
+          // Image
           AspectRatio(
             aspectRatio: 16 / 9,
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F2F6),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0F2F6),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: data.imageUrl == null || data.imageUrl!.isEmpty
+              child: _resolvedImage == null
                   ? const Center(
                 child: Icon(Icons.image, size: 72, color: Color(0xFFBEC3CF)),
               )
                   : ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
-                  data.imageUrl!,
+                  _resolvedImage!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Center(
                     child: Icon(Icons.broken_image, size: 64, color: Color(0xFFBEC3CF)),
@@ -53,11 +82,13 @@ class ProductCard extends StatelessWidget {
             ),
           ),
 
-          // Texts
+          // Title
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Text(
-              data.name,
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 18,
                 height: 1.15,
@@ -67,11 +98,15 @@ class ProductCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+
+          // Category (subtitle)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              'T-Shirts', // subtitle sesuai screenshot
-              style: TextStyle(
+              category,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFF969EAE),
                 fontWeight: FontWeight.w600,
@@ -80,7 +115,7 @@ class ProductCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Stock row
+          // Stock
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
@@ -95,11 +130,11 @@ class ProductCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${data.stock} Unit',
-                  style: const TextStyle(
+                  '$stock Unit',
+                  style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
-                    color: C.success,
+                    color: stockColor,
                   ),
                 ),
               ],
@@ -107,7 +142,7 @@ class ProductCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // View button dark
+          // View Button
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 18),
             child: SizedBox(

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-
 import '../color.dart';
 
 class SearchField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String>? onChanged;
-  const SearchField({super.key,
+  final ValueChanged<String>? onSubmitted; // <— tambahan
+
+  const SearchField({
+    super.key,
     required this.controller,
     required this.hint,
     this.onChanged,
+    this.onSubmitted, // <— tambahan
   });
 
   @override
@@ -29,9 +32,11 @@ class SearchField extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(
+              onSubmitted: onSubmitted,                 // <— panggil saat tekan enter/search
+              textInputAction: TextInputAction.search,  // <— tombol keyboard jadi “Search”
+              decoration: const InputDecoration(
+                hintText: 'Searching',
+                hintStyle: TextStyle(
                   color: C.hint,
                   fontWeight: FontWeight.w600,
                 ),
