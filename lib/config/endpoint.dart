@@ -9,4 +9,8 @@ class Endpoint {
 
   // activities role admin
   static const String activityRoleAdmin = '/api/activities';
+
+
+  // users role by admin
+  static const String usersByAdmin = '/api/users';
 }

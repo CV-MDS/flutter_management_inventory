@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_management_inventory/view/user_management/user_management_page.dart';
+import 'package:flutter_management_inventory/model/user_management.dart';
 import 'package:intl/intl.dart';
+
+import '../../widget/pill.dart';
 
 /// -----------------------
 /// User Detail Page
@@ -9,7 +11,7 @@ import 'package:intl/intl.dart';
 String _fmtDT(DateTime dt) => DateFormat("d MMMM y, HH:mm").format(dt);
 
 class UserDetailPage extends StatelessWidget {
-  final AppUser user;
+  final UserManagementUser user;
   const UserDetailPage({super.key, required this.user});
 
   @override
@@ -62,22 +64,22 @@ class UserDetailPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Pill(text: user.role, bg: const Color(0xFFFF3B30), fg: Colors.white),
+                    Pill(text: user.roles, bg: const Color(0xFFFF3B30), fg: Colors.white),
                   ]),
                   const SizedBox(height: 12),
                   Pill(
-                    text: user.active ? "Aktif" : "Nonaktif",
-                    bg: user.active ? const Color(0xFF5AF157) : Colors.grey.shade400,
+                    text: user.active ?? false ? "Aktif" : "Nonaktif",
+                    bg: user.active ?? false ? const Color(0xFF5AF157) : Colors.grey.shade400,
                     fg: Colors.white,
                   ),
                   const SizedBox(height: 16),
                   const Text("Bergabung sejak",
                       style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF333333))),
-                  Text(_fmtDT(user.joinedAt), style: const TextStyle(color: Color(0xFF8B8E99))),
+                  user.createdAt == null ? Container() : Text(_fmtDT(user.createdAt!), style: const TextStyle(color: Color(0xFF8B8E99))),
                   const SizedBox(height: 12),
                   const Text("Terakhir Diupdate",
                       style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF333333))),
-                  Text(_fmtDT(user.updatedAt), style: const TextStyle(color: Color(0xFF8B8E99))),
+                  user.updatedAt == null ? Container() : Text(_fmtDT(user.updatedAt!), style: const TextStyle(color: Color(0xFF8B8E99))),
                   const SizedBox(height: 18),
                   Row(
                     children: [
@@ -86,9 +88,9 @@ class UserDetailPage extends StatelessWidget {
                       const Text("Akun dibuat", style: TextStyle(fontWeight: FontWeight.w700)),
                     ],
                   ),
-                  Padding(
+                  user.createdAt == null ? Container() : Padding(
                     padding: const EdgeInsets.only(left: 32, top: 2),
-                    child: Text(_fmtDT(user.joinedAt), style: const TextStyle(color: Color(0xFF8B8E99))),
+                    child: Text(_fmtDT(user.createdAt!), style: const TextStyle(color: Color(0xFF8B8E99))),
                   ),
                 ],
               ),
