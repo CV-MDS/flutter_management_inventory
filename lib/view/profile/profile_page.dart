@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_management_inventory/view/home/home_page.dart';
+import 'package:flutter_management_inventory/view/product/product_page.dart';
 import 'package:flutter_management_inventory/view/user_management/user_management_page.dart';
 
 import '../../widget/sidebar_drawer.dart';
@@ -83,7 +84,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  int _selectedDrawer = 0;
+  int _selectedDrawer = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +121,10 @@ class _ProfilePageState extends State<ProfilePage> {
               );
               break;
             case 4:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProductPage()),
+              );
               break;
           }
         },

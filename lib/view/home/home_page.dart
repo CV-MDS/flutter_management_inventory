@@ -3,6 +3,7 @@ import 'package:flutter_management_inventory/config/app_color.dart';
 import 'package:flutter_management_inventory/model/dashboard.dart';
 import 'package:flutter_management_inventory/view/activity_history/activity_history_page.dart';
 import 'package:flutter_management_inventory/view/base_page.dart';
+import 'package:flutter_management_inventory/view/product/product_page.dart';
 import 'package:flutter_management_inventory/view/profile/profile_page.dart';
 import 'package:flutter_management_inventory/viewmodel/dashboard_viewmodel.dart';
 
@@ -110,7 +111,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
               break;
             case 4:
-            // Products (belum diimplement)
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
               break;
           }
         },

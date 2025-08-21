@@ -10,20 +10,6 @@ import '../../config/network.dart';
 import '../../config/pref.dart';
 import '../../widget/user_tile.dart';
 
-
-class _Debouncer {
-  _Debouncer(this.millis);
-  final int millis;
-  Timer? _t;
-
-  void run(VoidCallback f) {
-    _t?.cancel();
-    _t = Timer(Duration(milliseconds: millis), f);
-  }
-
-  void dispose() => _t?.cancel();
-}
-
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
 
@@ -342,6 +328,19 @@ class _UserManagementPageState extends State<UserManagementPage> {
       body: _body(),
     );
   }
+}
+
+class _Debouncer {
+  _Debouncer(this.millis);
+  final int millis;
+  Timer? _t;
+
+  void run(VoidCallback f) {
+    _t?.cancel();
+    _t = Timer(Duration(milliseconds: millis), f);
+  }
+
+  void dispose() => _t?.cancel();
 }
 
 
