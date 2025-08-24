@@ -158,6 +158,7 @@ class _LoginPageState extends State<LoginPage> {
           isLoading = false;
         });
         await Session().setUserToken(value.data["token"]);
+        await Session().setUserType(value.data["user"]['roles']);
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const BasePage()),
