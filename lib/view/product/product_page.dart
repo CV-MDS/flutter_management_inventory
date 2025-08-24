@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_management_inventory/view/product/create_product_page.dart';
 
 import '../../color.dart';
 import '../../model/product.dart';
@@ -10,9 +11,10 @@ import '../../widget/sidebar_drawer.dart';
 import '../activity_history/activity_history_page.dart';
 import '../home/home_page.dart';
 import '../user_management/user_management_page.dart';
-import '../profile/profile_page.dart'; // kalau perlu
+import '../profile/profile_page.dart';
 import '../../viewmodel/product_viewmodel.dart';
 import '../../config/model/resp.dart';
+import '../../config/pref.dart'; // NEW: untuk Session().getUserType()
 
 class ProductPage extends StatefulWidget {
   const ProductPage({super.key});
@@ -22,30 +24,30 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
-  // ===== Drawer =====
   int _selectedDrawer = 4;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // ===== UI State =====
   final _search = TextEditingController();
   String _selectedCategory = 'All Category';
   bool _lowStockOnly = false;
 
-  // ===== Data State =====
   final _vm = ProductViewmodel();
   final _scroll = ScrollController();
 
-  bool _initialLoading = true;     // loader tengah saat pertama kali load
-  bool _loadingMore = false;       // loader kecil saat ambil halaman berikutnya
+  bool _initialLoading = true;
+  bool _loadingMore = false;
   bool _refreshing = false;
 
   int _page = 1;
   int _lastPage = 1;
 
-  final List<Product> _all = [];       // semua hasil fetch (dari server)
-  final List<Product> _filtered = [];  // hasil setelah filter lokal
+  final List<Product> _all = [];
+  final List<Product> _filtered = [];
 
-  // derive kategori dari data
+  String? _userType; // NEW
+
+  bool get _canAdd => (_userType?.toLowerCase() ?? '') != 'admin'; // NEW
+
   List<String> get _categories {
     final s = <String>{'All Category'};
     for (final p in _all) {
@@ -55,12 +57,19 @@ class _ProductPageState extends State<ProductPage> {
     return s.toList();
   }
 
-  // ===== Lifecycle =====
   @override
   void initState() {
     super.initState();
+    _loadUserType(); // NEW
     _fetchFirst();
     _scroll.addListener(_onScroll);
+  }
+
+  // NEW: muat userType dari session
+  Future<void> _loadUserType() async {
+    final t = await Session().getUserType();
+    if (!mounted) return;
+    setState(() => _userType = t);
   }
 
   @override
@@ -71,7 +80,6 @@ class _ProductPageState extends State<ProductPage> {
     super.dispose();
   }
 
-  // ===== Fetching =====
   Future<void> _fetchFirst() async {
     setState(() {
       _initialLoading = true;
@@ -134,10 +142,9 @@ class _ProductPageState extends State<ProductPage> {
           } else {
             _all.addAll(items);
           }
-          _applyFilterLocal(); // terapkan filter kategori & low stock
+          _applyFilterLocal();
         });
       } else if (resp.code == 401) {
-        // TODO: arahkan ke login kalau perlu
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(resp.message ?? 'Unauthorized')),
@@ -159,21 +166,17 @@ class _ProductPageState extends State<ProductPage> {
   }
 
   void _onScroll() {
-    if (_scroll.position.pixels >=
-        _scroll.position.maxScrollExtent - 120) {
+    if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 120) {
       _fetchMore();
     }
   }
 
-  // ===== Filter Lokal =====
   void _applyFilterLocal() {
     final cat = _selectedCategory;
     final onlyLow = _lowStockOnly;
 
     final result = _all.where((p) {
-      final matchCat = (cat == 'All Category')
-          ? true
-          : (p.category?.name == cat);
+      final matchCat = (cat == 'All Category') ? true : (p.category?.name == cat);
       final matchLow = onlyLow ? p.isLowStock : true;
       return matchCat && matchLow;
     }).toList();
@@ -184,11 +187,15 @@ class _ProductPageState extends State<ProductPage> {
   }
 
   void _onPressFilter() async {
-    // Search dikirim ke server, kategori & low stock di client
     await _fetchFirst();
   }
 
-  // ===== UI =====
+  // NEW: handler untuk tombol Add Product
+  void _onAddProduct() {
+    // TODO: ganti ke halaman AddProduct saat sudah ada
+    Navigator.push(context, MaterialPageRoute(builder: (context) => CreateProductPage(),),);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,27 +209,37 @@ class _ProductPageState extends State<ProductPage> {
 
           switch (i) {
             case 0:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const HomePage()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage()));
               break;
             case 1:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ProductPage()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
               break;
             case 2:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
               break;
             case 3:
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const UserManagementPage()));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
               break;
             case 4:
-            // already in Product Page
               break;
           }
         },
       ),
+
+      // NEW: FAB hanya muncul jika bukan admin
+      floatingActionButton: _canAdd
+          ? FloatingActionButton.extended(
+        onPressed: _onAddProduct,
+        icon: const Icon(Icons.add),
+        label: const Text(
+          'Add Product',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: C.dark,
+        foregroundColor: Colors.white,
+      )
+          : null,
+
       body: SafeArea(
         child: _initialLoading
             ? const Center(child: CircularProgressIndicator())
@@ -233,7 +250,6 @@ class _ProductPageState extends State<ProductPage> {
             padding: const EdgeInsets.only(bottom: 24),
             children: [
               const SizedBox(height: 12),
-
               // ===== Header =====
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -330,7 +346,7 @@ class _ProductPageState extends State<ProductPage> {
                         controller: _search,
                         hint: 'Searching',
                         onSubmitted: (_) => _onPressFilter(),
-                        onChanged: (_) => setState(() {}), // biar UX responsif
+                        onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: 14),
                       const LabelWhite('Category'),
@@ -433,25 +449,18 @@ class _ProductPageState extends State<ProductPage> {
               else
                 ..._filtered.map((p) {
                   final catName = p.category?.name ?? '-';
-                  // ── Gunakan ProductCard versi named parameters ──
                   return ProductCard(
                     name: p.name,
                     category: catName,
                     stock: p.stockQuantity,
-                    imageUrl: p.image, // tampilkan kalau widget mendukung
+                    imageUrl: p.image,
                     lowStock: p.isLowStock,
                     onView: () {
-                      // TODO: navigasi ke detail
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('View: ${p.name}')),
                       );
                     },
                   );
-
-                  // Jika ProductCard kamu masih pakai `data:` dengan class sederhana,
-                  // kamu bisa bikin adapter kecil seperti ini:
-                  // final ui = _UiProduct(p.name, catName, p.stockQuantity);
-                  // return ProductCard(data: ui, onView: () { ... });
                 }),
 
               if (_loadingMore)
@@ -465,15 +474,4 @@ class _ProductPageState extends State<ProductPage> {
       ),
     );
   }
-}
-
-// ───────────────────────────────────────────────────────────────
-// OPTIONAL: adapter jika ProductCard kamu masih butuh `data:`
-// (hapus jika tidak diperlukan)
-// ───────────────────────────────────────────────────────────────
-class _UiProduct {
-  final String name;
-  final String category;
-  final int stock;
-  _UiProduct(this.name, this.category, this.stock);
 }

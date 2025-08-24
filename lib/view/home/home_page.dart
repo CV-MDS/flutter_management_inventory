@@ -31,11 +31,12 @@ class _HomePageState extends State<HomePage> {
 
   Dashboard? _dashboard;
   bool _isLoading = true;
-  String? _error, _userType;
+  String? _error, _userType, _name, _email;
 
   @override
   void initState() {
     super.initState();
+    getProfile();
     _fetchDashboard();
   }
 
@@ -94,37 +95,25 @@ class _HomePageState extends State<HomePage> {
     return 'now';
   }
 
+  Future<void> getProfile() async {
+    await AuthViewmodel().profile().then((value) {
+      if (value.code == 200){
+        setState(() {
+          _name = value.data['name'];
+          _email = value.data['email'];
+        });
+      }
+    },);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final name = _dashboard?.user?.name ?? 'Admin';
-    final role = (_dashboard?.role ?? _dashboard?.user?.roles ?? 'Administrator');
 
     return Scaffold(
       key: _scaffoldKey,
       drawer: SidebarDrawer(
         selectedIndex: _selectedDrawer,
-        onTap: (i) {
-          setState(() => _selectedDrawer = i);
-          Navigator.pop(context);
-
-          switch (i) {
-            case 0:
-            // Dashboard (stay here)
-              break;
-            case 1:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-              break;
-            case 2:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
-              break;
-            case 3:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
-              break;
-            case 4:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
-              break;
-          }
-        },
+        onTap: (i) => _handleDrawerTap(i),
       ),
       body: SafeArea(
         child: _isLoading
@@ -169,7 +158,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  role,
+                                  _userType ?? "",
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColor.hint,
@@ -272,7 +261,7 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Selamat Datang, $name",
+                        "Selamat Datang, $_name",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -281,14 +270,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
-                        "Kelola seluruh sistem dan pengguna\ndengan akses penuh",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -375,7 +356,7 @@ class _HomePageState extends State<HomePage> {
                 title: "Your activity",
                 onTap: () {},
               ),
-            ) : Container(),
+            ) : const SliverToBoxAdapter(child: SizedBox.shrink()),
 
             // Activity list dari API
             if ((_dashboard?.recentActivities ?? []).isEmpty)
@@ -384,7 +365,7 @@ class _HomePageState extends State<HomePage> {
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Center(child: Text('No recent activity')),
                 ),
-              ) : Container()
+              ) : const SliverToBoxAdapter(child: SizedBox.shrink())
             else
               _userType == "admin" ? SliverList.separated(
                 itemCount: _dashboard!.recentActivities.length,
@@ -406,7 +387,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                 },
-              ) : Container(),
+              ) : const SliverToBoxAdapter(child: SizedBox.shrink()),
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
@@ -414,6 +395,77 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  void _handleDrawerTap(int i) {
+    setState(() => _selectedDrawer = i);
+    Navigator.pop(context);
+
+    final type = _userType ?? 'admin'; // default biar aman
+
+    if (type == 'admin') {
+      // ORDER admin (sesuai menu): 0 Dashboard, 1 Profile, 2 Activity History, 3 User Management, 4 Products
+      switch (i) {
+        case 0: break; // dashboard
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage())); break;
+        case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage())); break;
+        case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        default: break;
+      }
+      return;
+    }
+
+    if (type == 'staff') {
+      // ORDER staff: 0 Dashboard, 1 Profile, 2 Categories, 3 Products, 4 Stock In, 5 Stock Out, 6 Stock In History, 7 Stock Out History
+      switch (i) {
+        case 0: break;
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2:
+        // TODO: ganti ke halaman Categories bila sudah ada
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
+          break;
+        case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        case 4:
+        // TODO: ganti ke StockInPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In')));
+          break;
+        case 5:
+        // TODO: ganti ke StockOutPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out')));
+          break;
+        case 6:
+        // TODO: ganti ke StockInHistoryPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In History')));
+          break;
+        case 7:
+        // TODO: ganti ke StockOutHistoryPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out History')));
+          break;
+        default: break;
+      }
+      return;
+    }
+
+    if (type == 'owner') {
+      // ORDER owner: 0 Dashboard, 1 Profile, 2 Products, 3 Stock In Reports, 4 Stock Out Reports
+      switch (i) {
+        case 0: break;
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        case 3:
+        // TODO: ganti ke StockInReportsPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In Reports')));
+          break;
+        case 4:
+        // TODO: ganti ke StockOutReportsPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out Reports')));
+          break;
+        default: break;
+      }
+      return;
+    }
+  }
+
 
   Widget _errorState() {
     return Center(

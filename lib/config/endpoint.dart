@@ -16,4 +16,8 @@ class Endpoint {
 
   static const String productUrl = '/api/products';
   static const String categoriesUrl = '/api/categories';
+
+  // profile
+  static const String profileUrl = '/api/auth/profile';
+  
 }

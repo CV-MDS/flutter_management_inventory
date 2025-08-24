@@ -32,4 +32,16 @@ class AuthViewmodel {
     Resp data = Resp.fromJson(resp);
     return data;
   }
+
+  Future<Resp> profile() async {
+    String? token = await Session().getUserToken();
+
+    var header = <String, dynamic>{};
+    header[HttpHeaders.authorizationHeader] = 'Bearer $token';
+
+    var resp = await Network.getApiWithHeaders(
+        Endpoint.profileUrl,header);
+    Resp data = Resp.fromJson(resp);
+    return data;
+  }
 }
