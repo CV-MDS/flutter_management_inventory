@@ -19,5 +19,9 @@ class Endpoint {
 
   // profile
   static const String profileUrl = '/api/auth/profile';
-  
+
+  //stock in
+  static const String stockInHistoryUrl = '/api/stock-ins/history';
+  static const String stockInUrl = '/api/stock-ins';
+
 }

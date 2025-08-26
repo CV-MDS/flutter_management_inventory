@@ -5,6 +5,7 @@ import 'package:flutter_management_inventory/view/activity_history/activity_hist
 import 'package:flutter_management_inventory/view/base_page.dart';
 import 'package:flutter_management_inventory/view/product/product_page.dart';
 import 'package:flutter_management_inventory/view/profile/profile_page.dart';
+import 'package:flutter_management_inventory/view/stock_in/stock_in_page.dart';
 import 'package:flutter_management_inventory/viewmodel/dashboard_viewmodel.dart';
 
 import '../../config/pref.dart';
@@ -400,12 +401,11 @@ class _HomePageState extends State<HomePage> {
     setState(() => _selectedDrawer = i);
     Navigator.pop(context);
 
-    final type = _userType ?? 'admin'; // default biar aman
+    final type = _userType ?? 'admin';
 
     if (type == 'admin') {
-      // ORDER admin (sesuai menu): 0 Dashboard, 1 Profile, 2 Activity History, 3 User Management, 4 Products
       switch (i) {
-        case 0: break; // dashboard
+        case 0: break;
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
         case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage())); break;
         case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage())); break;
@@ -416,7 +416,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (type == 'staff') {
-      // ORDER staff: 0 Dashboard, 1 Profile, 2 Categories, 3 Products, 4 Stock In, 5 Stock Out, 6 Stock In History, 7 Stock Out History
       switch (i) {
         case 0: break;
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
@@ -425,9 +424,7 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
           break;
         case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
-        case 4:
-        // TODO: ganti ke StockInPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In')));
+        case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const StockInPage()));
           break;
         case 5:
         // TODO: ganti ke StockOutPage
@@ -447,7 +444,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (type == 'owner') {
-      // ORDER owner: 0 Dashboard, 1 Profile, 2 Products, 3 Stock In Reports, 4 Stock Out Reports
       switch (i) {
         case 0: break;
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
