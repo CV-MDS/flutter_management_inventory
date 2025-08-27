@@ -24,4 +24,6 @@ class Endpoint {
   static const String stockInHistoryUrl = '/api/stock-ins/history';
   static const String stockInUrl = '/api/stock-ins';
 
+  static const String stockOutUrl = '/api/stock-outs';
+
 }

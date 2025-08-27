@@ -18,6 +18,14 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
   final _dateCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
+  bool _refLoading = false;
+  final String _refPrefix = 'SI';
+
+  int _extractSeq(String ref) {
+    final m = RegExp(r'(\d{3})$').firstMatch(ref);
+    return m == null ? 0 : int.tryParse(m.group(1)!) ?? 0;
+  }
+
   DateTime? _date;
 
   final List<Map<String, dynamic>> _products = [];
@@ -96,6 +104,55 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
     }
   }
 
+  Future<void> _generateRefForDate(DateTime date) async {
+    setState(() => _refLoading = true);
+    final ymd = DateFormat('yyyyMMdd').format(date);
+    final prefix = '$_refPrefix-$ymd-';
+
+    try {
+      final resp = await StockInViewmodel().getHistoryStockIn(
+        page: 1,
+        perPage: 50,
+        search: prefix,              // backend search by reference_number
+      );
+
+      if ((resp.code ?? 500) >= 300) {
+        throw resp.message ?? 'Load history failed';
+      }
+
+      final root = resp.data;
+      final dataMap = (root is Map && root['data'] is Map)
+          ? Map<String, dynamic>.from(root['data'] as Map)
+          : (root is Map<String, dynamic> ? root : <String, dynamic>{});
+
+      final rawItems = (dataMap['items'] as List?) ??
+          (dataMap['data'] as List?) ??
+          (root is List ? root : const <dynamic>[]);
+
+      int maxSeq = 0;
+      for (final it in rawItems) {
+        final m = it as Map;
+        final ref = (m['reference_number'] ?? m['ref'] ?? '').toString();
+        if (ref.startsWith(prefix)) {
+          final s = _extractSeq(ref);
+          if (s > maxSeq) maxSeq = s;
+        }
+      }
+
+      final nextSeq = (maxSeq + 1).toString().padLeft(3, '0');
+      final nextRef = '$prefix$nextSeq';
+
+      setState(() => _refCtrl.text = nextRef);
+    } catch (_) {
+      // fallback kalau gagal fetch/parsing
+      final nextRef = '';
+      setState(() => _refCtrl.text = nextRef);
+    } finally {
+      if (mounted) setState(() => _refLoading = false);
+    }
+  }
+
+
 
   @override
   void initState() {
@@ -106,6 +163,7 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
     'SI-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-001';
     _date = now;
     _dateCtrl.text = _fmtUi.format(now);
+    _generateRefForDate(now);
   }
 
   @override
@@ -128,6 +186,7 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
         _date = DateTime(picked.year, picked.month, picked.day);
         _dateCtrl.text = _fmtUi.format(_date!);
       });
+      await _generateRefForDate(_date!);
     }
   }
 
@@ -294,12 +353,29 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                           final refField = Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Reference Number *',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF6B7280))),
+                              const Text(
+                                'Reference Number *',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)),
+                              ),
                               const SizedBox(height: 6),
                               TextFormField(
                                 controller: _refCtrl,
-                                decoration: _dec('e.g. SI-20250826-001'),
+                                decoration: _dec(
+                                  'e.g. SI-20250826-001',
+                                  suffix: _refLoading
+                                      ? const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                                  )
+                                      : IconButton(
+                                    tooltip: 'Regenerate',
+                                    icon: const Icon(Icons.refresh),
+                                    onPressed: () {
+                                      final d = _date ?? DateTime.now();
+                                      _generateRefForDate(DateTime(d.year, d.month, d.day));
+                                    },
+                                  ),
+                                ),
                                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                               ),
                             ],
