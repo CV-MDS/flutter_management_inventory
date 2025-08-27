@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_management_inventory/viewmodel/product_viewmodel.dart';
 import 'package:intl/intl.dart';
 import '../../viewmodel/stockin_viewmodel.dart';
 
@@ -13,23 +14,17 @@ class CreateStockInPage extends StatefulWidget {
 class _CreateStockInPageState extends State<CreateStockInPage> {
   final _form = GlobalKey<FormState>();
 
-  // --- Controllers / state ---
   final _refCtrl = TextEditingController();
   final _dateCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
   DateTime? _date;
 
-  // Dummy products (ganti dengan fetch API jika diperlukan)
-  final List<Map<String, dynamic>> _products = const [
-    {'id': 1, 'name': 'Product A'},
-    {'id': 2, 'name': 'Product B'},
-    {'id': 3, 'name': 'Product C'},
-  ];
+  final List<Map<String, dynamic>> _products = [];
+  bool _productsLoading = false;
+  String? _productsError;
 
-  // Items = list of {product_id, quantity}
   final List<Map<String, dynamic>> _items = [
-    {'product_id': null, 'quantity': 1},
   ];
 
   final _fmtUi = DateFormat('dd/MM/yyyy');
@@ -37,10 +32,75 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
 
   bool _submitting = false;
 
+  Future<void> _fetchProducts({String? search}) async {
+    setState(() {
+      _productsLoading = true;
+      _productsError = null;
+    });
+
+    try {
+      final resp = await ProductViewmodel().getProducts(
+        page: 1,
+        perPage: 100,
+        search: search,
+      );
+
+      if ((resp.code ?? 500) >= 300) {
+        throw resp.message ?? 'Failed to load products';
+      }
+
+      // Struktur respons dibuat tahan banting:
+      final root = resp.data;
+      // seringnya { data: { items: [...] } }
+      final dataMap = (root is Map && root['data'] is Map)
+          ? Map<String, dynamic>.from(root['data'] as Map)
+          : (root is Map<String, dynamic> ? root : <String, dynamic>{});
+
+      final rawList = (dataMap['items'] as List?) ??
+          (dataMap['data'] as List?) ??
+          (root is List ? root : const []);
+
+      int _asIntId(dynamic v) {
+        if (v is int) return v;
+        if (v is String) return int.tryParse(v) ?? 0;
+        return 0;
+      }
+
+      final mapped = rawList.map<Map<String, dynamic>>((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        return {
+          'id': _asIntId(m['id'] ?? m['product_id'] ?? m['sku_id']),
+          'name': (m['name'] ??
+              m['product_name'] ??
+              m['title'] ??
+              m['skuName'] ??
+              'Unnamed')
+              .toString(),
+        };
+      }).where((p) => p['id'] != 0).toList();
+
+      setState(() {
+        _products
+          ..clear()
+          ..addAll(mapped);
+      });
+    } catch (e) {
+      setState(() => _productsError = e.toString());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Load products failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _productsLoading = false);
+    }
+  }
+
+
   @override
   void initState() {
     super.initState();
-    // generate ref number sederhana: SI-yyyymmdd-001
+    _fetchProducts();
     final now = DateTime.now();
     _refCtrl.text =
     'SI-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-001';
@@ -353,17 +413,78 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                             Widget productField = Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Product', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                                const SizedBox(height: 6),
-                                DropdownButtonFormField<int>(
-                                  value: it['product_id'] as int?,
-                                  items: _products
-                                      .map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['name'] as String)))
-                                      .toList(),
-                                  onChanged: (v) => setState(() => it['product_id'] = v),
-                                  decoration: _dec('Select Product', pad: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                                  validator: (v) => v == null ? 'Pilih produk' : null,
+                                const Text(
+                                  'Product',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF94A3B8),
+                                  ),
                                 ),
+                                const SizedBox(height: 6),
+
+                                // ---- Loading / Error / Dropdown ----
+                                if (_productsLoading)
+                                  Container(
+                                    height: 48,
+                                    alignment: Alignment.centerLeft,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                                    ),
+                                    child: Row(
+                                      children: const [
+                                        SizedBox(
+                                          width: 18, height: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                        SizedBox(width: 10),
+                                        Text('Loading products...'),
+                                      ],
+                                    ),
+                                  )
+                                else if (_productsError != null)
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          height: 48,
+                                          alignment: Alignment.centerLeft,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                                          ),
+                                          child: const Text('Failed to load products'),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Retry',
+                                        onPressed: () => _fetchProducts(),
+                                        icon: const Icon(Icons.refresh),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  DropdownButtonFormField<int>(
+                                    value: it['product_id'] as int?,
+                                    isExpanded: true,
+                                    items: _products
+                                        .map((p) => DropdownMenuItem<int>(
+                                      value: p['id'] as int,
+                                      child: Text(p['name'] as String),
+                                    ))
+                                        .toList(),
+                                    onChanged: (v) => setState(() => it['product_id'] = v),
+                                    decoration: _dec(
+                                      'Select Product',
+                                      pad: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    ),
+                                    validator: (v) => v == null ? 'Pilih produk' : null,
+                                  ),
                               ],
                             );
 
@@ -485,4 +606,6 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
       ),
     );
   }
+
+
 }

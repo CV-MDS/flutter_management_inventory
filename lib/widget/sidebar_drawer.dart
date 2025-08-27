@@ -227,19 +227,6 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
             icon: Icons.arrow_forward_rounded,
             label: "Stock Out",
           ),
-          const DrawerSectionLabel("HISTORY"),
-          _drawerItem(
-            context,
-            index: 6,
-            icon: Icons.access_time_rounded,
-            label: "Stock In History",
-          ),
-          _drawerItem(
-            context,
-            index: 7,
-            icon: Icons.access_time_rounded,
-            label: "Stock Out History",
-          ),
         ];
     }
   }

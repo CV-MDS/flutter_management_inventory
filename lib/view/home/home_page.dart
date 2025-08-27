@@ -6,6 +6,7 @@ import 'package:flutter_management_inventory/view/base_page.dart';
 import 'package:flutter_management_inventory/view/product/product_page.dart';
 import 'package:flutter_management_inventory/view/profile/profile_page.dart';
 import 'package:flutter_management_inventory/view/stock_in/stock_in_page.dart';
+import 'package:flutter_management_inventory/view/stock_out/stock_out_page.dart';
 import 'package:flutter_management_inventory/viewmodel/dashboard_viewmodel.dart';
 
 import '../../config/pref.dart';
@@ -17,6 +18,7 @@ import '../../widget/quick_tile.dart';
 import '../../widget/section_header.dart';
 import '../../widget/sidebar_drawer.dart';
 import '../../widget/stat_card.dart';
+import '../category/category_page.dart';
 import '../user_management/user_management_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -421,22 +423,13 @@ class _HomePageState extends State<HomePage> {
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
         case 2:
         // TODO: ganti ke halaman Categories bila sudah ada
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryPage()));
           break;
         case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
         case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const StockInPage()));
           break;
         case 5:
-        // TODO: ganti ke StockOutPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out')));
-          break;
-        case 6:
-        // TODO: ganti ke StockInHistoryPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In History')));
-          break;
-        case 7:
-        // TODO: ganti ke StockOutHistoryPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out History')));
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockOutPage()));
           break;
         default: break;
       }

@@ -6,6 +6,9 @@ import 'package:flutter_management_inventory/view/user_management/user_managemen
 import '../../viewmodel/auth_viewmodel.dart';
 import '../../widget/sidebar_drawer.dart';
 import '../activity_history/activity_history_page.dart';
+import '../category/category_page.dart';
+import '../stock_in/stock_in_page.dart';
+import '../stock_out/stock_out_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -149,26 +152,8 @@ class _ProfilePageState extends State<ProfilePage> {
       key: _scaffoldKey,
       drawer: SidebarDrawer(
         selectedIndex: _selectedDrawer,
-        onTap: (i) {
-          setState(() => _selectedDrawer = i);
-          Navigator.pop(context);
-          switch (i) {
-            case 0:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage()));
-              break;
-            case 1:
-              break;
-            case 2:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
-              break;
-            case 3:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
-              break;
-            case 4:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
-              break;
-          }
-        },
+        onTap: (i) => _handleDrawerTap(i),
+
       ),
       body: SafeArea(
         child: _loading
@@ -464,4 +449,60 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     ),
   );
+
+  void _handleDrawerTap(int i) {
+    setState(() => _selectedDrawer = i);
+    Navigator.pop(context);
+
+    final type = _role ?? 'admin';
+
+    if (type == 'admin') {
+      switch (i) {
+        case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage())); break;
+        case 1: break;
+        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage())); break;
+        case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage())); break;
+        case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        default: break;
+      }
+      return;
+    }
+
+    if (type == 'staff') {
+      switch (i) {
+        case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage())); break;
+        case 1: break;
+        case 2:
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryPage()));
+          break;
+        case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const StockInPage()));
+        break;
+        case 5:
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockOutPage()));
+          break;
+        default: break;
+      }
+      return;
+    }
+
+    if (type == 'owner') {
+      switch (i) {
+        case 0: break;
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        case 3:
+        // TODO: ganti ke StockInReportsPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In Reports')));
+          break;
+        case 4:
+        // TODO: ganti ke StockOutReportsPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out Reports')));
+          break;
+        default: break;
+      }
+      return;
+    }
+  }
+
 }
