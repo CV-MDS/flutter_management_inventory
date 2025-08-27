@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_management_inventory/view/stock_out/stock_out_detail_page.dart';
 import 'package:flutter_management_inventory/viewmodel/stockin_viewmodel.dart';
 import 'package:intl/intl.dart';
 
@@ -568,11 +569,7 @@ class _StockOutPageState extends State<StockOutPage> {
                               children: [
                                 IconButton(
                                   tooltip: 'View',
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('View ${e['ref']}')),
-                                    );
-                                  },
+                                  onPressed: () => _openDetail(Map<String, dynamic>.from(e)),
                                   icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF475569)),
                                 ),
                                 IconButton(
@@ -603,4 +600,93 @@ class _StockOutPageState extends State<StockOutPage> {
       ),
     );
   }
+
+  Future<void> _openDetail(Map<String, dynamic> e) async {
+    final id = (e['id'] ?? '').toString();
+    if (id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID transaksi tidak ditemukan')),
+      );
+      return;
+    }
+
+    // Loading dialog simpel
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Panggil endpoint detail
+      final resp = await _vm.getHistoryStockOut(
+        perPage: 10,
+        search: _search.text.trim().isEmpty ? null : _search.text.trim(),
+      );
+      if (resp.code != 200) {
+        Navigator.pop(context); // tutup loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resp.message ?? 'Gagal memuat detail')),
+        );
+        return;
+      }
+
+      final data = (resp.data as Map?) ?? const {};
+      // -------- mapping aman (null-safe) --------
+      String _s(dynamic v) => (v ?? '').toString();
+      DateTime _dt(dynamic v) =>
+          v is DateTime ? v : (DateTime.tryParse('${v ?? ''}') ?? DateTime.now());
+      int _i(dynamic v) => int.tryParse('${v ?? 0}') ?? 0;
+      double _d(dynamic v) => double.tryParse('${v ?? 0}') ?? 0.0;
+
+      final itemsRaw = (data['items'] as List? ?? const []);
+
+      // Bangun model StockOutDetail (dari file detail page yang sudah kubuat)
+      final detail = StockOutDetail(
+        referenceNumber: _s(data['reference_number']),
+        date: _dt(data['date']),
+        createdBy: _s((data['user'] as Map?)?['name']),
+        createdAt: _dt(data['created_at']),
+        notes: _s(data['notes']),
+        items: itemsRaw.map((it) {
+          final m = it as Map?;
+          return StockOutItem(
+            productName: _s(m?['product']?['name'] ?? m?['product_name']),
+            subtitle: _s(m?['product']?['brand'] ?? m?['brand'] ?? m?['sku']),
+            currentStock: _i(m?['current_stock']),
+            qtyOut: _i(m?['quantity'] ?? m?['qty_out']),
+            amount: _d(m?['amount']),
+          );
+        }).toList(),
+      );
+
+      Navigator.pop(context); // tutup loading
+
+      // Navigate ke halaman detail
+      // (import StockOutDetailPage & modelnya)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StockOutDetailPage(
+            data: detail,
+            onEdit: () {
+              // TODO: navigate ke halaman edit menggunakan id yang sama
+            },
+            onDelete: () async {
+              // TODO: panggil delete di VM: await _vm.deleteStockOut(id: id);
+              // setelah sukses:
+              Navigator.pop(context, true); // close detail
+              _fetchFirst();                 // refresh list
+            },
+          ),
+        ),
+      );
+    } catch (err) {
+      Navigator.pop(context); // tutup loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $err')),
+      );
+    }
+  }
+
 }

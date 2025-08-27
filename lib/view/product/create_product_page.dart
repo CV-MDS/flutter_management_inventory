@@ -7,6 +7,9 @@ import 'package:flutter/services.dart';
 import '../../model/category.dart';
 import '../../viewmodel/category_viewmodel.dart';
 import '../../viewmodel/product_viewmodel.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mime/mime.dart';
+import 'package:path/path.dart' as p;
 
 class CreateProductPage extends StatefulWidget {
   const CreateProductPage({super.key});
@@ -65,6 +68,54 @@ class _CreateProductPageState extends State<CreateProductPage> {
       );
     }
   }
+
+  final _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600, // sedikit kompres via resize
+        maxHeight: 1600,
+        imageQuality: 85, // 0-100 (jpeg)
+      );
+      if (picked == null) return;
+
+      final file = File(picked.path);
+      final err = await _validateImage(file);
+      if (err != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() => _imageFile = file);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memilih gambar: $e')),
+      );
+    }
+  }
+
+  Future<String?> _validateImage(File file) async {
+    // ukuran < 2MB
+    final bytes = await file.length();
+    const max = 2 * 1024 * 1024;
+    if (bytes > max) {
+      return 'Ukuran gambar maksimal 2MB. File sekarang ${(bytes/1024/1024).toStringAsFixed(2)}MB';
+    }
+
+    // mime check
+    final mime = lookupMimeType(file.path) ?? '';
+    const allowed = ['image/png','image/jpg','image/jpeg','image/gif'];
+    if (!allowed.contains(mime)) {
+      return 'Format tidak didukung. Gunakan PNG/JPG/JPEG/GIF';
+    }
+    return null;
+  }
+
 
   @override
   void initState() {
@@ -408,55 +459,76 @@ class _CreateProductPageState extends State<CreateProductPage> {
                       Text('Product Image', style: _section),
                       const SizedBox(height: 8),
 
-                      // Upload placeholder (tap -> snackBar)
-                      GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Pick image… (belum diimplementasi, opsional)')),
-                          );
-                        },
-                        child: Container(
-                          height: 140,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: const Color(0xFFD1D5DB),
-                                style: BorderStyle.solid),
+                      if (_imageFile == null)
+                        InkWell(
+                          onTap: _pickImage,
+                          child: Container(
+                            height: 140,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFD1D5DB)),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.image_outlined, size: 36, color: Color(0xFF9CA3AF)),
+                                SizedBox(height: 8),
+                                Text.rich(TextSpan(children: [
+                                  TextSpan(text: 'Upload a file ', style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w800)),
+                                  TextSpan(text: 'or tap to browse', style: TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+                                ])),
+                                SizedBox(height: 4),
+                                Text('PNG, JPG, GIF up to 2MB', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+                              ],
+                            ),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.image_outlined,
-                                  size: 36, color: Color(0xFF9CA3AF)),
-                              SizedBox(height: 8),
-                              Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                        text: 'Upload a file ',
-                                        style: TextStyle(
-                                            color: Color(0xFF2563EB),
-                                            fontWeight: FontWeight.w800)),
-                                    TextSpan(
-                                        text: 'or drag and drop',
-                                        style: TextStyle(
-                                            color: Color(0xFF6B7280),
-                                            fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
+                        )
+                      else
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _imageFile!,
+                                height: 180,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
                               ),
-                              SizedBox(height: 4),
-                              Text('PNG, JPG, GIF up to 2MB',
-                                  style: TextStyle(
-                                      color: Color(0xFF9CA3AF), fontSize: 12)),
-                            ],
-                          ),
+                            ),
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Row(
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: _pickImage,
+                                    icon: const Icon(Icons.swap_horiz, size: 18),
+                                    label: const Text('Ganti'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2563EB),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton.filled(
+                                    onPressed: () => setState(() => _imageFile = null),
+                                    icon: const Icon(Icons.close),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.black.withOpacity(.5),
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    tooltip: 'Hapus',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
 
                       const SizedBox(height: 18),
 

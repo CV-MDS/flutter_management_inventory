@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_management_inventory/view/product/create_product_page.dart';
+import 'package:flutter_management_inventory/view/product/product_detail_page.dart';
 
 import '../../color.dart';
 import '../../model/product.dart';
@@ -9,7 +11,10 @@ import '../../widget/product_card.dart';
 import '../../widget/search_field.dart';
 import '../../widget/sidebar_drawer.dart';
 import '../activity_history/activity_history_page.dart';
+import '../category/category_page.dart';
 import '../home/home_page.dart';
+import '../stock_in/stock_in_page.dart';
+import '../stock_out/stock_out_page.dart';
 import '../user_management/user_management_page.dart';
 import '../profile/profile_page.dart';
 import '../../viewmodel/product_viewmodel.dart';
@@ -24,7 +29,7 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
-  int _selectedDrawer = 4;
+  int _selectedDrawer = 3;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final _search = TextEditingController();
@@ -203,30 +208,8 @@ class _ProductPageState extends State<ProductPage> {
       backgroundColor: C.bg,
       drawer: SidebarDrawer(
         selectedIndex: _selectedDrawer,
-        onTap: (i) {
-          setState(() => _selectedDrawer = i);
-          Navigator.pop(context);
-
-          switch (i) {
-            case 0:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage()));
-              break;
-            case 1:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage()));
-              break;
-            case 2:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage()));
-              break;
-            case 3:
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
-              break;
-            case 4:
-              break;
-          }
-        },
+        onTap: (i) => _handleDrawerTap(i),
       ),
-
-      // NEW: FAB hanya muncul jika bukan admin
       floatingActionButton: _canAdd
           ? FloatingActionButton.extended(
         onPressed: _onAddProduct,
@@ -237,9 +220,7 @@ class _ProductPageState extends State<ProductPage> {
         ),
         backgroundColor: C.dark,
         foregroundColor: Colors.white,
-      )
-          : null,
-
+      ) : null,
       body: SafeArea(
         child: _initialLoading
             ? const Center(child: CircularProgressIndicator())
@@ -453,11 +434,21 @@ class _ProductPageState extends State<ProductPage> {
                     name: p.name,
                     category: catName,
                     stock: p.stockQuantity,
-                    imageUrl: p.image,
+                    imageUrl: "${dotenv.env['IMAGE_BASE_URL']!}${p.image}",
                     lowStock: p.isLowStock,
                     onView: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('View: ${p.name}')),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailPage(
+                            product: p,
+                            imageUrl: "${dotenv.env['IMAGE_BASE_URL']!}${p.image}",
+                            onEdit: () {
+                              // TODO: arahkan ke halaman edit product
+                              // Navigator.push(context, MaterialPageRoute(builder: (_) => EditProductPage(product: p)));
+                            },
+                          ),
+                        ),
                       );
                     },
                   );
@@ -473,5 +464,60 @@ class _ProductPageState extends State<ProductPage> {
         ),
       ),
     );
+  }
+
+  void _handleDrawerTap(int i) {
+    setState(() => _selectedDrawer = i);
+    Navigator.pop(context);
+
+    final type = _userType ?? 'admin';
+
+    if (type == 'admin') {
+      switch (i) {
+        case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage()));  break;
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityHistoryPage())); break;
+        case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage())); break;
+        case 4: break;
+        default: break;
+      }
+      return;
+    }
+
+    if (type == 'staff') {
+      switch (i) {
+        case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage())); break;
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2:
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryPage()));
+          break;
+        case 3: break;
+        case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const StockInPage()));
+        break;
+        case 5:
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockOutPage()));
+          break;
+        default: break;
+      }
+      return;
+    }
+
+    if (type == 'owner') {
+      switch (i) {
+        case 0: break;
+        case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
+        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        case 3:
+        // TODO: ganti ke StockInReportsPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In Reports')));
+          break;
+        case 4:
+        // TODO: ganti ke StockOutReportsPage
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out Reports')));
+          break;
+        default: break;
+      }
+      return;
+    }
   }
 }

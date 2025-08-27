@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_management_inventory/view/stock_in/stock_in_detail_page.dart';
 import 'package:intl/intl.dart';
 
 import '../../viewmodel/stockin_viewmodel.dart';
@@ -575,9 +576,35 @@ class _StockInPageState extends State<StockInPage> {
                                     IconButton(
                                       tooltip: 'View',
                                       onPressed: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('View ${e['ref']}')),
+                                        // di tempat kamu handle "View"
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => StockInDetailPage(
+                                              data: StockInDetail(
+                                                referenceNumber: e['ref'],
+                                                date: e['date'], // DateTime
+                                                createdBy: e['by'],
+                                                createdAt: e['date'], // kalau server ada field created_at, pakai itu
+                                                items: [
+                                                  // map dari payload detail endpoint-mu
+                                                  // contoh 1 baris seperti di screenshot:
+                                                  StockInItem(productName: 'supreme', productSubtitle: 'supreme', quantity: 12),
+                                                ],
+                                              ),
+                                              onEdit: () {
+                                                // TODO: arahkan ke halaman edit stock-in
+                                              },
+                                              onDelete: () async {
+                                                // TODO: panggil viewmodel delete
+                                                // await _vm.deleteStockIn(id);
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
+                                                Navigator.pop(context, true);
+                                              },
+                                            ),
+                                          ),
                                         );
+
                                       },
                                       icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF475569)),
                                     ),

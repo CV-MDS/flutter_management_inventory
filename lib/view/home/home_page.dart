@@ -332,22 +332,22 @@ class _HomePageState extends State<HomePage> {
                       icon: Icons.person_rounded,
                       title: "Lihat Profile",
                       subtitle: "Kelola informasi akun",
-                      onTap: () => _go(1), // JANGAN onTap: _go(1)
+                      onTap: () => _go(1),
                     ),
                     const SizedBox(height: 10),
-                    QuickTile(
+                    _userType == "admin" ? QuickTile(
                       icon: Icons.groups_rounded,
                       title: "Management Users",
                       subtitle: "Quick Access",
                       onTap: () => _go(3),
-                    ),
+                    ) : Container(),
                     const SizedBox(height: 10),
-                    QuickTile(
+                    _userType == "admin" ? QuickTile(
                       icon: Icons.history_toggle_off_rounded,
                       title: "Activity Logs",
                       subtitle: "Quick Access",
                       onTap: () => _go(2),
-                    ),
+                    ) : Container(),
                   ],
                 ),
               ),
@@ -422,7 +422,6 @@ class _HomePageState extends State<HomePage> {
         case 0: break;
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
         case 2:
-        // TODO: ganti ke halaman Categories bila sudah ada
           Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryPage()));
           break;
         case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;

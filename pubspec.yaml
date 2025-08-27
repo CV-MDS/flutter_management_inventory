@@ -45,6 +45,9 @@ dependencies:
   fluttertoast: ^8.2.12
   shared_preferences: ^2.0.15
   logger: ^2.6.0
+  image_picker: ^1.2.0
+  mime: ^2.0.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

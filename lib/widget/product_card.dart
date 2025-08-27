@@ -24,18 +24,6 @@ class ProductCard extends StatelessWidget {
     this.imageBaseUrl,
   });
 
-  String? get _resolvedImage {
-    final path = imageUrl?.trim();
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    if (imageBaseUrl == null || imageBaseUrl!.isEmpty) return null;
-    var base = imageBaseUrl!;
-    var p = path;
-    if (base.endsWith('/')) base = base.substring(0, base.length - 1);
-    if (p.startsWith('/')) p = p.substring(1);
-    return '$base/$p';
-  }
-
   @override
   Widget build(BuildContext context) {
     final stockColor = lowStock ? const Color(0xFFFF3B30) : C.success;
@@ -65,14 +53,14 @@ class ProductCard extends StatelessWidget {
                 color: Color(0xFFF0F2F6),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: _resolvedImage == null
+              child: imageUrl == null
                   ? const Center(
                 child: Icon(Icons.image, size: 72, color: Color(0xFFBEC3CF)),
               )
                   : ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
-                  _resolvedImage!,
+                  imageUrl ?? "",
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Center(
                     child: Icon(Icons.broken_image, size: 64, color: Color(0xFFBEC3CF)),
