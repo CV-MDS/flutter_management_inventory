@@ -97,6 +97,7 @@ class _StockInPageState extends State<StockInPage> {
               v is DateTime ? v : (DateTime.tryParse('${v ?? ''}') ?? DateTime.now());
 
           return {
+            'id'   : m['id'],
             'ref'  : _s(m['reference_number']),
             'note' : _s(m['notes']),
             'date' : _dt(m['date']),
@@ -165,6 +166,76 @@ class _StockInPageState extends State<StockInPage> {
       ..addAll(res);
     setState(() {});
   }
+
+  Future<void> _editTransaction(Map<String, dynamic> e) async {
+    final id = e['id'];
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID transaksi tidak ditemukan')),
+      );
+      return;
+    }
+
+    // loading mini
+    showDialog(context: context, barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()));
+
+    try {
+      // asumsi ada API detail: getHistoryStockInDetail(id)
+      final resp = await _vm.getDetailStockIn(id: id.toString());
+      Navigator.pop(context); // tutup loading
+
+      if (resp.code != 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resp.message ?? 'Gagal memuat detail')),
+        );
+        return;
+      }
+
+      final m = (resp.data as Map?) ?? const {};
+      // helper parse
+      String _s(v) => (v ?? '').toString();
+      int _i(v) => int.tryParse('${v ?? 0}') ?? 0;
+      DateTime _dt(v) => v is DateTime ? v : (DateTime.tryParse('${v ?? ''}') ?? DateTime.now());
+
+      final ref   = _s(m['reference_number']);
+      final date  = _dt(m['date']);
+      final notes = _s(m['notes']);
+      final items = (m['items'] as List? ?? const []).map<Map<String, dynamic>>((it) {
+        final x = it as Map?;
+        return {
+          'product_id'  : _i(x?['product_id']),
+          'product_name': _s(x?['product']?['name'] ?? x?['product_name']),
+          'quantity'    : _i(x?['quantity']),
+        };
+      }).toList();
+
+      // buka form edit
+      final updated = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CreateStockInPage(
+            isEdit: true,
+            editId: id is int ? id : int.tryParse('$id'),
+            initialReference: ref,
+            initialDate: date,
+            initialNotes: notes.isEmpty ? null : notes,
+            initialItems: items,
+          ),
+        ),
+      );
+
+      if (updated == true) {
+        _fetchFirst(); // refresh list
+      }
+    } catch (err) {
+      Navigator.pop(context); // tutup loading kalau masih terbuka
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $err')),
+      );
+    }
+  }
+
 
   // ================= UI helpers =================
 
@@ -580,28 +651,7 @@ class _StockInPageState extends State<StockInPage> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => StockInDetailPage(
-                                              data: StockInDetail(
-                                                referenceNumber: e['ref'],
-                                                date: e['date'], // DateTime
-                                                createdBy: e['by'],
-                                                createdAt: e['date'], // kalau server ada field created_at, pakai itu
-                                                items: [
-                                                  // map dari payload detail endpoint-mu
-                                                  // contoh 1 baris seperti di screenshot:
-                                                  StockInItem(productName: 'supreme', productSubtitle: 'supreme', quantity: 12),
-                                                ],
-                                              ),
-                                              onEdit: () {
-                                                // TODO: arahkan ke halaman edit stock-in
-                                              },
-                                              onDelete: () async {
-                                                // TODO: panggil viewmodel delete
-                                                // await _vm.deleteStockIn(id);
-                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
-                                                Navigator.pop(context, true);
-                                              },
-                                            ),
+                                            builder: (_) => StockInDetailPage(id: e['id']),
                                           ),
                                         );
 
@@ -611,9 +661,7 @@ class _StockInPageState extends State<StockInPage> {
                                     IconButton(
                                       tooltip: 'Edit',
                                       onPressed: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Edit ${e['ref']}')),
-                                        );
+                                        _editTransaction(e);
                                       },
                                       icon: const Icon(Icons.edit_outlined, color: Color(0xFF475569)),
                                     ),

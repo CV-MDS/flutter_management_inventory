@@ -5,7 +5,22 @@ import 'package:intl/intl.dart';
 import '../../viewmodel/stockin_viewmodel.dart';
 
 class CreateStockInPage extends StatefulWidget {
-  const CreateStockInPage({super.key});
+  const CreateStockInPage({
+    super.key,
+    this.isEdit = false,
+    this.editId, // optional; pakai kalau update by id di URL
+    this.initialReference,
+    this.initialDate,
+    this.initialNotes,
+    this.initialItems, // List<Map>{product_id, product_name?, quantity}
+  });
+
+  final bool isEdit;
+  final int? editId;
+  final String? initialReference;
+  final DateTime? initialDate;
+  final String? initialNotes;
+  final List<Map<String, dynamic>>? initialItems;
 
   @override
   State<CreateStockInPage> createState() => _CreateStockInPageState();
@@ -32,8 +47,7 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
   bool _productsLoading = false;
   String? _productsError;
 
-  final List<Map<String, dynamic>> _items = [
-  ];
+  final List<Map<String, dynamic>> _items = [];
 
   final _fmtUi = DateFormat('dd/MM/yyyy');
   final _fmtApi = DateFormat('yyyy-MM-dd');
@@ -64,7 +78,8 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
           ? Map<String, dynamic>.from(root['data'] as Map)
           : (root is Map<String, dynamic> ? root : <String, dynamic>{});
 
-      final rawList = (dataMap['items'] as List?) ??
+      final rawList =
+          (dataMap['items'] as List?) ??
           (dataMap['data'] as List?) ??
           (root is List ? root : const []);
 
@@ -74,30 +89,45 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
         return 0;
       }
 
-      final mapped = rawList.map<Map<String, dynamic>>((e) {
-        final m = Map<String, dynamic>.from(e as Map);
-        return {
-          'id': _asIntId(m['id'] ?? m['product_id'] ?? m['sku_id']),
-          'name': (m['name'] ??
-              m['product_name'] ??
-              m['title'] ??
-              m['skuName'] ??
-              'Unnamed')
-              .toString(),
-        };
-      }).where((p) => p['id'] != 0).toList();
+      final mapped = rawList
+          .map<Map<String, dynamic>>((e) {
+            final m = Map<String, dynamic>.from(e as Map);
+            return {
+              'id': _asIntId(m['id'] ?? m['product_id'] ?? m['sku_id']),
+              'name':
+                  (m['name'] ??
+                          m['product_name'] ??
+                          m['title'] ??
+                          m['skuName'] ??
+                          'Unnamed')
+                      .toString(),
+            };
+          })
+          .where((p) => p['id'] != 0)
+          .toList();
 
       setState(() {
         _products
           ..clear()
           ..addAll(mapped);
+
+        if (widget.isEdit && widget.initialItems != null) {
+          final existIds = _products.map((e) => e['id'] as int).toSet();
+          for (final it in widget.initialItems!) {
+            final pid = (it['product_id'] as int?) ?? 0;
+            final pname = (it['product_name'] as String?) ?? 'Product #$pid';
+            if (pid != 0 && !existIds.contains(pid)) {
+              _products.add({'id': pid, 'name': pname});
+            }
+          }
+        }
       });
     } catch (e) {
       setState(() => _productsError = e.toString());
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Load products failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Load products failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _productsLoading = false);
@@ -113,7 +143,7 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
       final resp = await StockInViewmodel().getHistoryStockIn(
         page: 1,
         perPage: 50,
-        search: prefix,              // backend search by reference_number
+        search: prefix, // backend search by reference_number
       );
 
       if ((resp.code ?? 500) >= 300) {
@@ -125,7 +155,8 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
           ? Map<String, dynamic>.from(root['data'] as Map)
           : (root is Map<String, dynamic> ? root : <String, dynamic>{});
 
-      final rawItems = (dataMap['items'] as List?) ??
+      final rawItems =
+          (dataMap['items'] as List?) ??
           (dataMap['data'] as List?) ??
           (root is List ? root : const <dynamic>[]);
 
@@ -152,18 +183,43 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
     }
   }
 
-
-
   @override
   void initState() {
     super.initState();
     _fetchProducts();
-    final now = DateTime.now();
-    _refCtrl.text =
-    'SI-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-001';
-    _date = now;
-    _dateCtrl.text = _fmtUi.format(now);
-    _generateRefForDate(now);
+
+    if (widget.isEdit) {
+      // set field dari initial
+      _refCtrl.text = widget.initialReference ?? '';
+      _date = widget.initialDate ?? DateTime.now();
+      _dateCtrl.text = _fmtUi.format(_date!);
+      _notesCtrl.text = widget.initialNotes ?? '';
+
+      _items
+        ..clear()
+        ..addAll(
+          (widget.initialItems ??
+                  const [
+                    {'product_id': null, 'quantity': 1},
+                  ])
+              .map(
+                (e) => {
+                  'product_id': e['product_id'],
+                  'quantity': e['quantity'] ?? 1,
+                  // simpan nama untuk jaga-jaga (menambah source pilihan jika belum ada di list produk)
+                  'product_name': e['product_name'],
+                },
+              ),
+        );
+    } else {
+      // mode create (seperti sebelumnya)
+      final now = DateTime.now();
+      _refCtrl.text =
+          'SI-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-001';
+      _date = now;
+      _dateCtrl.text = _fmtUi.format(now);
+      _generateRefForDate(now);
+    }
   }
 
   @override
@@ -212,11 +268,8 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
       isDense: true,
       filled: true,
       fillColor: Colors.white,
-      contentPadding: pad ??
-          const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+      contentPadding:
+          pad ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -234,60 +287,76 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
 
   Future<void> _submit() async {
     if (_date == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tanggal belum dipilih')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Tanggal belum dipilih')));
       return;
     }
-
     if (!_form.currentState!.validate()) return;
 
-    // Validasi item
     for (final it in _items) {
-      final pid = it['product_id'];
-      final qty = it['quantity'];
-      if (pid == null) {
+      if (it['product_id'] == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pilih produk untuk semua baris item')),
         );
         return;
       }
-      if (qty is! int || qty <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quantity harus > 0')),
-        );
+      final q = it['quantity'];
+      if (q is! int || q <= 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Quantity harus > 0')));
         return;
       }
     }
 
     setState(() => _submitting = true);
     try {
-      final res = await StockInViewmodel().createStockIn(
-        referenceNumber: _refCtrl.text.trim(),
-        date: _date!,
-        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-        items: _items
-            .map((e) => {
-          'product_id': e['product_id'],
-          'quantity': e['quantity'],
-        })
-            .toList(),
-      );
+      final payloadItems = _items
+          .map(
+            (e) => {'product_id': e['product_id'], 'quantity': e['quantity']},
+          )
+          .toList();
 
-      if ((res.code ?? 500) >= 300) {
-        throw res.message ?? 'Create Stock In gagal';
-      }
+      final vm = StockInViewmodel();
+      final res = widget.isEdit
+          ? await vm.updateStockInById(
+              // ← pakai varian byId jika kamu buat
+              id: widget.editId!,
+              referenceNumber: _refCtrl.text.trim(),
+              date: _date!,
+              notes: _notesCtrl.text.trim().isEmpty
+                  ? null
+                  : _notesCtrl.text.trim(),
+              items: payloadItems,
+            )
+          : await vm.createStockIn(
+              referenceNumber: _refCtrl.text.trim(),
+              date: _date!,
+              notes: _notesCtrl.text.trim().isEmpty
+                  ? null
+                  : _notesCtrl.text.trim(),
+              items: payloadItems,
+            );
+
+      if ((res.code ?? 500) >= 300) throw res.message ?? 'Request gagal';
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Create Stock In berhasil')),
+        SnackBar(
+          content: Text(
+            widget.isEdit
+                ? 'Update Stock In berhasil'
+                : 'Create Stock In berhasil',
+          ),
+        ),
       );
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -306,9 +375,9 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
         backgroundColor: bg,
         foregroundColor: const Color(0xFF111827),
         titleSpacing: 0,
-        title: const Text(
-          'Create Stock In',
-          style: TextStyle(fontWeight: FontWeight.w900),
+        title: Text(
+          widget.isEdit ? 'Edit Stock In' : 'Create Stock In',
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: SafeArea(
@@ -355,28 +424,52 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                             children: [
                               const Text(
                                 'Reference Number *',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF6B7280),
+                                ),
                               ),
                               const SizedBox(height: 6),
                               TextFormField(
                                 controller: _refCtrl,
+                                readOnly: widget.isEdit, // ←
                                 decoration: _dec(
                                   'e.g. SI-20250826-001',
-                                  suffix: _refLoading
-                                      ? const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                                  )
-                                      : IconButton(
-                                    tooltip: 'Regenerate',
-                                    icon: const Icon(Icons.refresh),
-                                    onPressed: () {
-                                      final d = _date ?? DateTime.now();
-                                      _generateRefForDate(DateTime(d.year, d.month, d.day));
-                                    },
-                                  ),
+                                  suffix: widget.isEdit
+                                      ? null
+                                      : (_refLoading
+                                            ? const Padding(
+                                                padding: EdgeInsets.all(12),
+                                                child: SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                ),
+                                              )
+                                            : IconButton(
+                                                tooltip: 'Regenerate',
+                                                icon: const Icon(Icons.refresh),
+                                                onPressed: () {
+                                                  final d =
+                                                      _date ?? DateTime.now();
+                                                  _generateRefForDate(
+                                                    DateTime(
+                                                      d.year,
+                                                      d.month,
+                                                      d.day,
+                                                    ),
+                                                  );
+                                                },
+                                              )),
                                 ),
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
                               ),
                             ],
                           );
@@ -384,15 +477,30 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                           final dateField = Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Stock In Date *',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF6B7280))),
+                              const Text(
+                                'Stock In Date *',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
                               const SizedBox(height: 6),
                               TextFormField(
                                 controller: _dateCtrl,
                                 readOnly: true,
                                 onTap: _pickDate,
-                                decoration: _dec('dd/MM/yyyy', suffix: const Icon(Icons.calendar_today_rounded, size: 18)),
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                decoration: _dec(
+                                  'dd/MM/yyyy',
+                                  suffix: const Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 18,
+                                  ),
+                                ),
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
                               ),
                             ],
                           );
@@ -423,9 +531,10 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                       const Text(
                         'Notes',
                         style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF6B7280)),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextFormField(
@@ -444,9 +553,10 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                             child: Text(
                               'Items',
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF111827)),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF111827),
+                              ),
                             ),
                           ),
                           SizedBox(
@@ -462,8 +572,9 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                textStyle:
-                                const TextStyle(fontWeight: FontWeight.w800),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
@@ -483,139 +594,185 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xFFE5E7EB)),
                           ),
-                          child: LayoutBuilder(builder: (_, c) {
-                            final isRow = c.maxWidth > 360; // cukup lebar? sejajarkan
+                          child: LayoutBuilder(
+                            builder: (_, c) {
+                              final isRow =
+                                  c.maxWidth > 360; // cukup lebar? sejajarkan
 
-                            Widget productField = Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Product',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-
-                                // ---- Loading / Error / Dropdown ----
-                                if (_productsLoading)
-                                  Container(
-                                    height: 48,
-                                    alignment: Alignment.centerLeft,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                                    ),
-                                    child: Row(
-                                      children: const [
-                                        SizedBox(
-                                          width: 18, height: 18,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        ),
-                                        SizedBox(width: 10),
-                                        Text('Loading products...'),
-                                      ],
-                                    ),
-                                  )
-                                else if (_productsError != null)
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Container(
-                                          height: 48,
-                                          alignment: Alignment.centerLeft,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                                          ),
-                                          child: const Text('Failed to load products'),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        tooltip: 'Retry',
-                                        onPressed: () => _fetchProducts(),
-                                        icon: const Icon(Icons.refresh),
-                                      ),
-                                    ],
-                                  )
-                                else
-                                  DropdownButtonFormField<int>(
-                                    value: it['product_id'] as int?,
-                                    isExpanded: true,
-                                    items: _products
-                                        .map((p) => DropdownMenuItem<int>(
-                                      value: p['id'] as int,
-                                      child: Text(p['name'] as String),
-                                    ))
-                                        .toList(),
-                                    onChanged: (v) => setState(() => it['product_id'] = v),
-                                    decoration: _dec(
-                                      'Select Product',
-                                      pad: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    ),
-                                    validator: (v) => v == null ? 'Pilih produk' : null,
-                                  ),
-                              ],
-                            );
-
-                            Widget qtyField = SizedBox(
-                              width: isRow ? 120 : double.infinity,
-                              child: Column(
+                              Widget productField = Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Quantity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                                  const Text(
+                                    'Product',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF94A3B8),
+                                    ),
+                                  ),
                                   const SizedBox(height: 6),
-                                  TextFormField(
-                                    initialValue: '${it['quantity']}',
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                    onChanged: (v) => it['quantity'] = int.tryParse(v) ?? 0,
-                                    decoration: _dec('1', pad: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                                    validator: (v) {
-                                      final n = int.tryParse(v ?? '');
-                                      if (n == null || n <= 0) return '>= 1';
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
 
-                            final deleteBtn = IconButton(
-                              onPressed: () => _removeItem(i),
-                              tooltip: 'Remove',
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                            );
-
-                            if (isRow) {
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: productField),
-                                  const SizedBox(width: 10),
-                                  qtyField,
-                                  const SizedBox(width: 6),
-                                  deleteBtn,
+                                  // ---- Loading / Error / Dropdown ----
+                                  if (_productsLoading)
+                                    Container(
+                                      height: 48,
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: const Color(0xFFE5E7EB),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: const [
+                                          SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text('Loading products...'),
+                                        ],
+                                      ),
+                                    )
+                                  else if (_productsError != null)
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            height: 48,
+                                            alignment: Alignment.centerLeft,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: const Color(0xFFE5E7EB),
+                                              ),
+                                            ),
+                                            child: const Text(
+                                              'Failed to load products',
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Retry',
+                                          onPressed: () => _fetchProducts(),
+                                          icon: const Icon(Icons.refresh),
+                                        ),
+                                      ],
+                                    )
+                                  else
+                                    DropdownButtonFormField<int>(
+                                      value: it['product_id'] as int?,
+                                      isExpanded: true,
+                                      items: _products
+                                          .map(
+                                            (p) => DropdownMenuItem<int>(
+                                              value: p['id'] as int,
+                                              child: Text(p['name'] as String),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => it['product_id'] = v),
+                                      decoration: _dec(
+                                        'Select Product',
+                                        pad: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      validator: (v) =>
+                                          v == null ? 'Pilih produk' : null,
+                                    ),
                                 ],
                               );
-                            }
-                            // stacked: no Expanded
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                productField,
-                                const SizedBox(height: 10),
-                                qtyField,
-                                Align(alignment: Alignment.centerRight, child: deleteBtn),
-                              ],
-                            );
-                          }),
+
+                              Widget qtyField = SizedBox(
+                                width: isRow ? 120 : double.infinity,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Quantity',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    TextFormField(
+                                      initialValue: '${it['quantity']}',
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      onChanged: (v) =>
+                                          it['quantity'] = int.tryParse(v) ?? 0,
+                                      decoration: _dec(
+                                        '1',
+                                        pad: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      validator: (v) {
+                                        final n = int.tryParse(v ?? '');
+                                        if (n == null || n <= 0) return '>= 1';
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              final deleteBtn = IconButton(
+                                onPressed: () => _removeItem(i),
+                                tooltip: 'Remove',
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                              );
+
+                              if (isRow) {
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: productField),
+                                    const SizedBox(width: 10),
+                                    qtyField,
+                                    const SizedBox(width: 6),
+                                    deleteBtn,
+                                  ],
+                                );
+                              }
+                              // stacked: no Expanded
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  productField,
+                                  const SizedBox(height: 10),
+                                  qtyField,
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: deleteBtn,
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         );
                       }),
 
@@ -626,18 +783,23 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: _submitting ? null : () => Navigator.pop(context),
+                              onPressed: _submitting
+                                  ? null
+                                  : () => Navigator.pop(context),
                               style: OutlinedButton.styleFrom(
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 14),
-                                side:
-                                const BorderSide(color: Color(0xFFD1D5DB)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: const BorderSide(
+                                  color: Color(0xFFD1D5DB),
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 foregroundColor: const Color(0xFF111827),
                                 textStyle: const TextStyle(
-                                    fontWeight: FontWeight.w800),
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                               child: const Text('Cancel'),
                             ),
@@ -647,27 +809,33 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
                             child: ElevatedButton(
                               onPressed: _submitting ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 backgroundColor: const Color(0xFF22C55E),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 textStyle: const TextStyle(
-                                    fontWeight: FontWeight.w800),
+                                  fontWeight: FontWeight.w800,
+                                ),
                                 elevation: 0,
                               ),
                               child: _submitting
                                   ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                                  : const Text('Create Stock In'),
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      widget.isEdit
+                                          ? 'Update Stock In'
+                                          : 'Create Stock In',
+                                    ),
                             ),
                           ),
                         ],
@@ -682,6 +850,4 @@ class _CreateStockInPageState extends State<CreateStockInPage> {
       ),
     );
   }
-
-
 }

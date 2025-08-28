@@ -40,6 +40,19 @@ class StockInViewmodel{
     return Resp.fromJson(resp);
   }
 
+  Future<Resp> getDetailStockIn({
+    dynamic id
+  }) async {
+    final String? token = await Session().getUserToken();
+
+    final header = <String, dynamic>{
+      HttpHeaders.authorizationHeader: 'Bearer $token',
+    };
+
+    final resp = await Network.getApiWithHeaders("${Endpoint.stockInUrl}/$id", header);
+    return Resp.fromJson(resp);
+  }
+
   Future<Resp> createStockIn({
     required String referenceNumber,
     required DateTime date,
@@ -86,6 +99,41 @@ class StockInViewmodel{
 
     return Resp.fromJson(resp);
   }
+
+  Future<Resp> updateStockInById({
+    required int id,
+    required String referenceNumber,
+    required DateTime date,
+    String? notes,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final token = await Session().getUserToken();
+    String fmt(DateTime d) => '${d.year.toString().padLeft(4,'0')}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+    int toInt(v) => v is int ? v : int.tryParse('${v ?? ''}') ?? 0;
+
+    final body = {
+      'reference_number': referenceNumber,
+      'date': fmt(date),
+      if ((notes ?? '').trim().isNotEmpty) 'notes': notes!.trim(),
+      'items': items.map((e) => {
+        'product_id': toInt(e['product_id']),
+        'quantity'  : toInt(e['quantity']),
+      }).toList(),
+    };
+
+    final headers = {
+      HttpHeaders.authorizationHeader: 'Bearer $token',
+      HttpHeaders.contentTypeHeader: 'application/json',
+    };
+
+    final resp = await Network.putApiWithHeaders(
+      '${Endpoint.stockInUrl}/$id', // /stock-ins/{id}
+      body,
+      headers,
+    );
+    return Resp.fromJson(resp);
+  }
+
 
   Future<Resp> createStockOut({
     required String referenceNumber,
