@@ -320,24 +320,22 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () {},
               ),
               const SizedBox(height: 12),
-              _quickAction(
+              _role == "admin" ? _quickAction(
                 icon: Icons.group_rounded,
                 title: 'Management Users',
                 subtitle: 'Quick Access',
                 onTap: () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const UserManagementPage()));
                 },
-              ),
+              ) : Container(),
               const SizedBox(height: 12),
-              _quickAction(
+              _role == "admin" ? _quickAction(
                 icon: Icons.history_edu_rounded,
                 title: 'Activity Logs',
                 subtitle: 'Quick Access',
                 onTap: () {},
-              ),
+              ) : Container(),
               const SizedBox(height: 20),
-
-              // ===== Edit Button =====
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
