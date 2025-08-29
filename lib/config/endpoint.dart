@@ -26,4 +26,9 @@ class Endpoint {
 
   static const String stockOutUrl = '/api/stock-outs';
 
+  static const String stockInReports = '/api/reports/stock-ins';
+  static const String stockInPDF = '/api/reports/stock-ins/pdf';
+  static const String stockOutPDF = '/api/reports/stock-outs/pdf';
+  static const String stockOutsReports = '/api/reports/stock-outs';
+
 }

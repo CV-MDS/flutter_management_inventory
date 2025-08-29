@@ -29,7 +29,7 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
-  int _selectedDrawer = 3;
+  late int _selectedDrawer = 3;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final _search = TextEditingController();
@@ -73,8 +73,12 @@ class _ProductPageState extends State<ProductPage> {
   // NEW: muat userType dari session
   Future<void> _loadUserType() async {
     final t = await Session().getUserType();
+
     if (!mounted) return;
-    setState(() => _userType = t);
+    setState(() {
+      _userType = t;
+      _selectedDrawer = t == "owner" ? 2 : t == "admin" ? 1 : 3;
+    });
   }
 
   @override
@@ -504,9 +508,9 @@ class _ProductPageState extends State<ProductPage> {
 
     if (type == 'owner') {
       switch (i) {
-        case 0: break;
+        case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage())); break;
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
-        case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
+        case 2: break;
         case 3:
         // TODO: ganti ke StockInReportsPage
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In Reports')));

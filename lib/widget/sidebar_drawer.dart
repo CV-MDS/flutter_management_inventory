@@ -168,20 +168,20 @@ class _SidebarDrawerState extends State<SidebarDrawer> {
           // sesuaikan switch navigasi kamu.
           _drawerItem(
             context,
-            index: 3,
+            index: 2,
             icon: Icons.inventory_2_rounded,
             label: "Products",
           ),
           const DrawerSectionLabel("REPORTS"),
           _drawerItem(
             context,
-            index: 6,
+            index: 3,
             icon: Icons.insert_chart_outlined_rounded,
             label: "Stock In Reports",
           ),
           _drawerItem(
             context,
-            index: 7,
+            index: 4,
             icon: Icons.insert_chart_outlined_rounded,
             label: "Stock Out Reports",
           ),
