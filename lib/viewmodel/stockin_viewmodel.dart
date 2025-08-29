@@ -212,4 +212,18 @@ class StockInViewmodel{
     final resp = await Network.getApiWithHeaders(url, header);
     return Resp.fromJson(resp);
   }
+
+  Future<Resp> getDetailStockOut({
+    dynamic id
+  }) async {
+    final String? token = await Session().getUserToken();
+
+    final header = <String, dynamic>{
+      HttpHeaders.authorizationHeader: 'Bearer $token',
+    };
+
+    final resp = await Network.getApiWithHeaders("${Endpoint.stockOutUrl}/$id", header);
+    return Resp.fromJson(resp);
+  }
+
 }

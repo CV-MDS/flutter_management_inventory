@@ -95,6 +95,7 @@ class _StockOutPageState extends State<StockOutPage> {
           final m = raw as Map;
 
           String _s(dynamic v) => (v ?? '').toString();
+          int _i(dynamic v) => v is int ? v : int.tryParse('${v ?? 0}') ?? 0;
 
           DateTime _parseDt(dynamic v) {
             if (v is DateTime) return v;
@@ -107,6 +108,7 @@ class _StockOutPageState extends State<StockOutPage> {
           final by = _s((m['user'] as Map?)?['name']);
 
           return {
+            'id'   : _i(m['id']),
             'ref': ref,
             'date': date,
             'items': itemsList.length,
@@ -569,7 +571,26 @@ class _StockOutPageState extends State<StockOutPage> {
                               children: [
                                 IconButton(
                                   tooltip: 'View',
-                                  onPressed: () => _openDetail(Map<String, dynamic>.from(e)),
+                                  onPressed: () async {
+                                    int _i(dynamic v) => v is int ? v : int.tryParse('${v ?? 0}') ?? 0;
+                                    final id = _i(e['id']); // helper sama seperti di atas; atau langsung e['id']
+                                    if (id == 0) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('ID transaksi tidak ditemukan')),
+                                      );
+                                      return;
+                                    }
+
+                                    final changed = await Navigator.push<bool>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => StockOutDetailPage(id: id),
+                                      ),
+                                    );
+
+                                    // optional: refresh kalau dari detail ada aksi delete/edit yang return true
+                                    if (changed == true) _fetchFirst();
+                                  },
                                   icon: const Icon(Icons.remove_red_eye_outlined, color: Color(0xFF475569)),
                                 ),
                                 IconButton(
@@ -601,92 +622,6 @@ class _StockOutPageState extends State<StockOutPage> {
     );
   }
 
-  Future<void> _openDetail(Map<String, dynamic> e) async {
-    final id = (e['id'] ?? '').toString();
-    if (id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID transaksi tidak ditemukan')),
-      );
-      return;
-    }
 
-    // Loading dialog simpel
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      // Panggil endpoint detail
-      final resp = await _vm.getHistoryStockOut(
-        perPage: 10,
-        search: _search.text.trim().isEmpty ? null : _search.text.trim(),
-      );
-      if (resp.code != 200) {
-        Navigator.pop(context); // tutup loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(resp.message ?? 'Gagal memuat detail')),
-        );
-        return;
-      }
-
-      final data = (resp.data as Map?) ?? const {};
-      // -------- mapping aman (null-safe) --------
-      String _s(dynamic v) => (v ?? '').toString();
-      DateTime _dt(dynamic v) =>
-          v is DateTime ? v : (DateTime.tryParse('${v ?? ''}') ?? DateTime.now());
-      int _i(dynamic v) => int.tryParse('${v ?? 0}') ?? 0;
-      double _d(dynamic v) => double.tryParse('${v ?? 0}') ?? 0.0;
-
-      final itemsRaw = (data['items'] as List? ?? const []);
-
-      // Bangun model StockOutDetail (dari file detail page yang sudah kubuat)
-      final detail = StockOutDetail(
-        referenceNumber: _s(data['reference_number']),
-        date: _dt(data['date']),
-        createdBy: _s((data['user'] as Map?)?['name']),
-        createdAt: _dt(data['created_at']),
-        notes: _s(data['notes']),
-        items: itemsRaw.map((it) {
-          final m = it as Map?;
-          return StockOutItem(
-            productName: _s(m?['product']?['name'] ?? m?['product_name']),
-            subtitle: _s(m?['product']?['brand'] ?? m?['brand'] ?? m?['sku']),
-            currentStock: _i(m?['current_stock']),
-            qtyOut: _i(m?['quantity'] ?? m?['qty_out']),
-            amount: _d(m?['amount']),
-          );
-        }).toList(),
-      );
-
-      Navigator.pop(context); // tutup loading
-
-      // Navigate ke halaman detail
-      // (import StockOutDetailPage & modelnya)
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StockOutDetailPage(
-            data: detail,
-            onEdit: () {
-              // TODO: navigate ke halaman edit menggunakan id yang sama
-            },
-            onDelete: () async {
-              // TODO: panggil delete di VM: await _vm.deleteStockOut(id: id);
-              // setelah sukses:
-              Navigator.pop(context, true); // close detail
-              _fetchFirst();                 // refresh list
-            },
-          ),
-        ),
-      );
-    } catch (err) {
-      Navigator.pop(context); // tutup loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $err')),
-      );
-    }
-  }
 
 }

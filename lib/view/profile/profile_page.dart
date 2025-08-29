@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_management_inventory/view/home/home_page.dart';
 import 'package:flutter_management_inventory/view/product/product_page.dart';
+import 'package:flutter_management_inventory/view/stock_in_report/stock_in_report_page.dart';
+import 'package:flutter_management_inventory/view/stock_out_report/stock_out_report_page.dart';
 import 'package:flutter_management_inventory/view/user_management/user_management_page.dart';
 
 import '../../viewmodel/auth_viewmodel.dart';
@@ -489,14 +491,8 @@ class _ProfilePageState extends State<ProfilePage> {
         case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage())); break;
         case 1: break;
         case 2: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductPage())); break;
-        case 3:
-        // TODO: ganti ke StockInReportsPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In Reports')));
-          break;
-        case 4:
-        // TODO: ganti ke StockOutReportsPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out Reports')));
-          break;
+        case 3: Navigator.push(context, MaterialPageRoute(builder: (_) => const StockInReportPage())); break;
+        case 4: Navigator.push(context, MaterialPageRoute(builder: (_) => const StockOutReportPage())); break;
         default: break;
       }
       return;

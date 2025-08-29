@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_management_inventory/view/product/create_product_page.dart';
 import 'package:flutter_management_inventory/view/product/product_detail_page.dart';
+import 'package:flutter_management_inventory/view/stock_out_report/stock_out_report_page.dart';
 
 import '../../color.dart';
 import '../../model/product.dart';
@@ -14,6 +15,7 @@ import '../activity_history/activity_history_page.dart';
 import '../category/category_page.dart';
 import '../home/home_page.dart';
 import '../stock_in/stock_in_page.dart';
+import '../stock_in_report/stock_in_report_page.dart';
 import '../stock_out/stock_out_page.dart';
 import '../user_management/user_management_page.dart';
 import '../profile/profile_page.dart';
@@ -511,14 +513,9 @@ class _ProductPageState extends State<ProductPage> {
         case 0: Navigator.push(context, MaterialPageRoute(builder: (_) => const HomePage())); break;
         case 1: Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())); break;
         case 2: break;
-        case 3:
-        // TODO: ganti ke StockInReportsPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock In Reports')));
-          break;
+        case 3:Navigator.push(context, MaterialPageRoute(builder: (_) => const StockInReportPage())); break;
         case 4:
-        // TODO: ganti ke StockOutReportsPage
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Go to Stock Out Reports')));
-          break;
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockOutReportPage())); break;
         default: break;
       }
       return;
