@@ -15,6 +15,7 @@ import 'package:flutter_management_inventory/viewmodel/dashboard_viewmodel.dart'
 import '../../config/pref.dart';
 import '../../viewmodel/auth_viewmodel.dart';
 import '../../viewmodel/report_viewmodel.dart';
+import '../../viewmodel/show_dialog_logout.dart';
 import '../../widget/activity_tile.dart';
 import '../../widget/circle_icon.dart';
 import '../../widget/custom_toast.dart';
@@ -658,28 +659,6 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-
-  Future<bool> showConfirmLogoutDialog(BuildContext context) async {
-    final res = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Apakah kamu yakin ingin keluar dari akun?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-    return res ?? false;
   }
 
   void _go(int index) {

@@ -5,9 +5,13 @@ import 'package:flutter_management_inventory/view/stock_in_report/stock_in_repor
 import 'package:flutter_management_inventory/view/stock_out_report/stock_out_report_page.dart';
 import 'package:flutter_management_inventory/view/user_management/user_management_page.dart';
 
+import '../../config/pref.dart';
 import '../../viewmodel/auth_viewmodel.dart';
+import '../../viewmodel/show_dialog_logout.dart';
+import '../../widget/custom_toast.dart';
 import '../../widget/sidebar_drawer.dart';
 import '../activity_history/activity_history_page.dart';
+import '../base_page.dart';
 import '../category/category_page.dart';
 import '../stock_in/stock_in_page.dart';
 import '../stock_out/stock_out_page.dart';
@@ -192,7 +196,34 @@ class _ProfilePageState extends State<ProfilePage> {
                     border: Border.all(color: Colors.black12),
                     icon: Icons.open_in_new_rounded,
                     iconColor: _textDark,
-                    onTap: () {},
+                    onTap: () async {
+                      final ok =
+                      await showConfirmLogoutDialog(context);
+                      if (ok) {
+                        AuthViewmodel()
+                            .logout()
+                            .then((value) async {
+                          if (value.code == 200) {
+                            await Session().logout();
+                            if (!mounted) return;
+                            Navigator.of(context)
+                                .pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                  const BasePage()),
+                                  (Route<dynamic> route) => false,
+                            );
+                            showToast(
+                                context: context,
+                                msg: "Logout Berhasil");
+                          } else {
+                            showToast(
+                                context: context,
+                                msg: "Terjadi Kesalahan");
+                          }
+                        });
+                      }
+                    },
                   ),
                 ],
               ),
@@ -338,7 +369,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () {},
               ) : Container(),
               const SizedBox(height: 20),
-              SizedBox(
+              role != "admin" ? Container() : SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(

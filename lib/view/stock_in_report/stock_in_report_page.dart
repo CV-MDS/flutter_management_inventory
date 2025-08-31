@@ -439,12 +439,21 @@ class _StockInReportPageState extends State<StockInReportPage> {
                         style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF111827))),
                     Text(_fmtRow.format(r['date']),
                         style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text(r['ref'], style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text(
+                      r['ref'],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
                     Text(r['items_text'], overflow: TextOverflow.ellipsis),
                     Text('${r['total_qty']}',
                         textAlign: TextAlign.right,
                         style: const TextStyle(fontWeight: FontWeight.w800)),
-                    Text(r['user']),
+                    Text(
+                      r['user'],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
                   ];
                 }),
               ),
@@ -521,8 +530,8 @@ class _SummaryCard extends StatelessWidget {
 class _TableCard extends StatelessWidget {
   const _TableCard({
     required this.title,
-    required this.headers,
-    required this.rows,
+    required this.headers, // header full: ['NO','TANGGAL','REFERENSI','ITEMS','TOTAL QTY','USER']
+    required this.rows,    // setiap row punya 6 widget sesuai urutan header full
   });
 
   final String title;
@@ -531,71 +540,124 @@ class _TableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colFlex = const [1, 2, 3, 4, 2, 3];
+    return LayoutBuilder(
+      builder: (context, c) {
+        // ===== mode compact utk layar sempit =====
+        final bool compact = c.maxWidth < 520;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 12, offset: const Offset(0, 6))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(10)),
-            child: Row(
-              children: List.generate(headers.length, (i) {
-                return Expanded(
-                  flex: colFlex[i],
-                  child: Text(headers[i],
-                      style: const TextStyle(color: Color(0xFF6B7280), fontWeight: FontWeight.w800, letterSpacing: .2)),
-                );
-              }),
-            ),
+        // header & kolom yang ditampilkan
+        final List<String> hdrs = compact
+            ? const ['NO', 'REFERENSI', 'ITEMS', 'QTY', 'USER'] // Tanggal disembunyikan, Total Qty => QTY
+            : headers;
+
+        // mapping row: ambil subset kolom bila compact
+        final List<List<Widget>> displayRows = compact
+            ? rows
+            .map((r) => <Widget>[r[0], r[2], r[3], r[4], r[5]]) // drop index 1 (Tanggal)
+            .toList()
+            : rows;
+
+        // fleks kolom
+        final List<int> colFlex = compact
+            ? const [1, 4, 2, 2, 3]     // NO, REF, ITEMS, QTY, USER
+            : const [1, 2, 3, 4, 2, 3]; // NO, TGL, REF, ITEMS, QTY, USER
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: const Border.fromBorderSide(BorderSide(color: Color(0xFFE5E7EB))),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 12, offset: const Offset(0, 6))],
           ),
-          const Divider(height: 0),
-          if (rows.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: Text('No data', style: TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
-              ),
-            )
-          else
-            ...List.generate(rows.length, (i) {
-              final r = rows[i];
-              return Container(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                decoration:
-                const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF0F2F5), width: 1))),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+              const SizedBox(height: 12),
+
+              // ===== header =====
+              Container(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(10)),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(r.length, (j) {
+                  children: List.generate(hdrs.length, (i) {
                     return Expanded(
-                      flex: colFlex[j],
-                      child: j == 3
-                          ? DefaultTextStyle(
-                        style: const TextStyle(color: Color(0xFF111827), fontWeight: FontWeight.w600),
-                        child: r[j],
-                      )
-                          : Align(
-                        alignment: j == 4 ? Alignment.centerRight : Alignment.centerLeft,
-                        child: r[j],
+                      flex: colFlex[i],
+                      child: Text(
+                        hdrs[i],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false, // biar tidak pecah baris
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .2,
+                        ),
                       ),
                     );
                   }),
                 ),
-              );
-            }),
-        ],
-      ),
+              ),
+              const Divider(height: 0),
+
+              // ===== rows =====
+              if (displayRows.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Text('No data', style: TextStyle(color: Color(0xFF9CA3AF), fontWeight: FontWeight.w700)),
+                  ),
+                )
+              else
+                ...List.generate(displayRows.length, (i) {
+                  final r = displayRows[i];
+                  return Container(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                    decoration: const BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Color(0xFFF0F2F5), width: 1)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: List.generate(r.length, (j) {
+                        // indeks bantu biar rapih
+                        final qtyIndex  = compact ? 3 : 4;
+                        final userIndex = compact ? 4 : 5;
+                        final isItemsCol = compact ? j == 2 : j == 3;
+
+                        return Expanded(
+                          flex: colFlex[j],
+                          child: Padding(
+                            // beri jarak kecil di kanan QTY & kiri USER supaya tidak “nempel”
+                            padding: EdgeInsets.only(
+                              right: j == qtyIndex ? 8 : 0,
+                              left:  j == userIndex ? 8 : 0,
+                            ),
+                            child: isItemsCol
+                                ? DefaultTextStyle(
+                              style: const TextStyle(
+                                color: Color(0xFF111827),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              child: r[j],
+                            )
+                                : Align(
+                              alignment: j == qtyIndex ? Alignment.centerRight : Alignment.centerLeft,
+                              child: r[j],
+                            ),
+                          ),
+                        );
+
+                      }),
+                    ),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
     );
   }
 }
+

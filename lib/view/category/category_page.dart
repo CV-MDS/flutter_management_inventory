@@ -457,29 +457,6 @@ class _CategoryPageState extends State<CategoryPage> {
                                 ],
                               ),
                             ),
-
-                            // right actions
-                            if (tight)
-                              PopupMenuButton<String>(
-                                onSelected: (v) async {
-                                  if (v == 'View') {
-                                    await _showDetail(e['id']);
-                                  } else if (v == 'Edit') {
-                                    // TODO: navigate ke edit page kalau ada
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('TODO: Edit category')),
-                                    );
-                                  } else if (v == 'Delete') {
-                                    await _delete(e['id'], e['name']);
-                                  }
-                                },
-                                itemBuilder: (context) => const [
-                                  PopupMenuItem(value: 'View', child: Text('View')),
-                                  PopupMenuItem(value: 'Edit', child: Text('Edit')),
-                                  PopupMenuItem(value: 'Delete', child: Text('Delete')),
-                                ],
-                              )
-                            else
                               Column(
                                 children: [
                                   IconButton(
@@ -498,28 +475,6 @@ class _CategoryPageState extends State<CategoryPage> {
                                       if (updated == true) _fetch(); // refresh list
                                     },
                                     icon: const Icon(Icons.edit_outlined, color: Color(0xFF475569)),
-                                  ),
-
-// --- versi popup (tight)
-                                  PopupMenuButton<String>(
-                                    onSelected: (v) async {
-                                      if (v == 'View') {
-                                        await _showDetail(e['id']);
-                                      } else if (v == 'Edit') {
-                                        final updated = await Navigator.push<bool>(
-                                          context,
-                                          MaterialPageRoute(builder: (_) => CreateCategoryPage(id: e['id'])),
-                                        );
-                                        if (updated == true) _fetch();
-                                      } else if (v == 'Delete') {
-                                        await _delete(e['id'], e['name']);
-                                      }
-                                    },
-                                    itemBuilder: (context) => const [
-                                      PopupMenuItem(value: 'View', child: Text('View')),
-                                      PopupMenuItem(value: 'Edit', child: Text('Edit')),
-                                      PopupMenuItem(value: 'Delete', child: Text('Delete')),
-                                    ],
                                   ),
                                   IconButton(
                                     tooltip: 'Delete',

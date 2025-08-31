@@ -450,8 +450,38 @@ class _ProductPageState extends State<ProductPage> {
                             product: p,
                             imageUrl: "${dotenv.env['IMAGE_BASE_URL']!}${p.image}",
                             onEdit: () {
-                              // TODO: arahkan ke halaman edit product
-                              // Navigator.push(context, MaterialPageRoute(builder: (_) => EditProductPage(product: p)));
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProductDetailPage(
+                                    product: p,
+                                    imageUrl: "${dotenv.env['IMAGE_BASE_URL']!}${p.image}",
+                                    onEdit: () async {
+                                      final updated = await Navigator.push<bool>(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => CreateProductPage(
+                                            isEdit: true,
+                                            editId: p.id, // pastikan Product punya id
+                                            initialName: p.name,
+                                            initialCategoryId: p.category?.id,
+                                            initialDescription: p.description,
+                                            initialBrand: p.brand,
+                                            initialSize: p.size,
+                                            initialColor: p.color,
+                                            initialStockQuantity: p.stockQuantity,
+                                            initialMinStockLevel: p.minStockLevel,
+                                            initialImageUrl: "${dotenv.env['IMAGE_BASE_URL']!}${p.image}",
+                                          ),
+                                        ),
+                                      );
+                                      if (updated == true) {
+                                        _fetchFirst(); // refresh daftar
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
                         ),
